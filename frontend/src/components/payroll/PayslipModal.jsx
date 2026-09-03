@@ -90,7 +90,7 @@ export function PayslipModal({ recordId, isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-backdrop active" onClick={onClose}>
+    <div className="modal-backdrop active payslip-modal-backdrop" onClick={onClose}>
       <div 
         className="modal-container payslip-modal-container"
         onClick={e => e.stopPropagation()}

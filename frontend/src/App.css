@@ -6353,27 +6353,86 @@
    OFFICIAL INSTITUTIONAL PAYSLIP PRINT STYLES
    ========================================================================== */
 @media print {
-  body * {
-    visibility: hidden;
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
   }
-  .printable-payslip-area,
-  .printable-payslip-area * {
-    visibility: visible;
-  }
-  .printable-payslip-area {
-    position: absolute;
-    left: 0;
-    top: 0;
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
     width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide app navigation, chrome, and controls */
+  .sidebar-clean,
+  .sidebar,
+  .top-header,
+  .main-wrapper > header,
+  .page-container,
+  .mobile-menu-toggle-btn,
+  .no-print,
+  .btn-close,
+  .clean-sidebar-footer,
+  button {
+    display: none !important;
+  }
+
+  /* Keep modal backdrop completely visible and transparent */
+  .modal-backdrop,
+  .payslip-modal-backdrop {
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
+    overflow: visible !important;
     box-shadow: none !important;
+    z-index: auto !important;
   }
-  .no-print,
-  .sidebar-clean,
-  .top-header,
-  .modal-backdrop {
-    display: none !important;
+
+  /* Make modal container fill page cleanly without cutoff */
+  .modal-container,
+  .payslip-modal-container {
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  .printable-payslip-area {
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  .printable-payslip-area * {
+    visibility: visible !important;
   }
 }
 
