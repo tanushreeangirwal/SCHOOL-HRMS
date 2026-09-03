@@ -73,6 +73,13 @@ router.get("/", authenticateToken, async (req, res) => {
         s.end_time AS shift_end_time,
         s.working_days AS shift_working_days,
         e.profile_photo_url,
+        esa.id AS salary_assignment_id,
+        esa.salary_structure_id,
+        ss.name AS salary_structure_name,
+        ss.code AS salary_structure_code,
+        esa.monthly_gross,
+        esa.annual_ctc,
+        esa.effective_from AS salary_effective_from,
         e.created_at,
         e.updated_at
       FROM employees e
@@ -81,6 +88,8 @@ router.get("/", authenticateToken, async (req, res) => {
       LEFT JOIN employment_types et ON e.employment_type_id = et.id
       LEFT JOIN employees m ON e.reporting_manager_id = m.id
       LEFT JOIN shifts s ON e.current_shift_id = s.id
+      LEFT JOIN employee_salary_assignments esa ON e.id = esa.employee_id AND esa.is_active = true
+      LEFT JOIN salary_structures ss ON esa.salary_structure_id = ss.id
     `;
 
     const whereClauses = [];
@@ -180,13 +189,22 @@ router.get("/:id", authenticateToken, async (req, res) => {
         s.code AS shift_code,
         s.start_time AS shift_start_time,
         s.end_time AS shift_end_time,
-        s.working_days AS shift_working_days
+        s.working_days AS shift_working_days,
+        esa.id AS salary_assignment_id,
+        esa.salary_structure_id,
+        ss.name AS salary_structure_name,
+        ss.code AS salary_structure_code,
+        esa.monthly_gross,
+        esa.annual_ctc,
+        esa.effective_from AS salary_effective_from
       FROM employees e
       LEFT JOIN departments d ON e.department_id = d.id
       LEFT JOIN designations des ON e.designation_id = des.id
       LEFT JOIN employment_types et ON e.employment_type_id = et.id
       LEFT JOIN employees m ON e.reporting_manager_id = m.id
       LEFT JOIN shifts s ON e.current_shift_id = s.id
+      LEFT JOIN employee_salary_assignments esa ON e.id = esa.employee_id AND esa.is_active = true
+      LEFT JOIN salary_structures ss ON esa.salary_structure_id = ss.id
       WHERE e.id = $1
     `, [requestedId]);
 

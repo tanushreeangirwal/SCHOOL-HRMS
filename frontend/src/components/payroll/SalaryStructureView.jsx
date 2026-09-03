@@ -9,10 +9,13 @@ import {
   ShieldCheck, 
   Percent, 
   Building2,
-  FileText
+  FileText,
+  Edit3,
+  Search
 } from 'lucide-react';
 import { hrmsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import AssignSalaryModal from './AssignSalaryModal';
 
 export function SalaryStructureView() {
   const { isSuperAdmin, isAdmin, isHR } = useAuth();
@@ -22,8 +25,14 @@ export function SalaryStructureView() {
   const [structures, setStructures] = useState([]);
   const [components, setComponents] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Modal State
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedEmployeeForAssign, setSelectedEmployeeForAssign] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -33,21 +42,40 @@ export function SalaryStructureView() {
     setIsLoading(true);
     setError(null);
     try {
-      const [structRes, compRes, assignRes] = await Promise.all([
+      const [structRes, compRes, assignRes, empRes] = await Promise.all([
         hrmsApi.getSalaryStructures(),
         hrmsApi.getSalaryComponents(),
-        hrmsApi.getEmployeeSalaryAssignments()
+        hrmsApi.getEmployeeSalaryAssignments(),
+        hrmsApi.getEmployees({ status: 'Active' })
       ]);
 
       if (structRes?.success) setStructures(structRes.data);
       if (compRes?.success) setComponents(compRes.data);
       if (assignRes?.success) setAssignments(assignRes.data);
+      if (empRes?.success) setEmployees(empRes.data);
     } catch (err) {
       setError(err.message || 'Failed to fetch salary structure configuration.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleOpenAssignModal = (employee = null) => {
+    setSelectedEmployeeForAssign(employee);
+    setIsAssignModalOpen(true);
+  };
+
+  const filteredAssignments = assignments.filter(a => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (a.first_name || '').toLowerCase().includes(q) ||
+      (a.last_name || '').toLowerCase().includes(q) ||
+      (a.employee_code || '').toLowerCase().includes(q) ||
+      (a.department_name || '').toLowerCase().includes(q) ||
+      (a.structure_name || '').toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="salary-structure-view" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -92,6 +120,18 @@ export function SalaryStructureView() {
             <span>Staff Salary Registry ({assignments.length})</span>
           </button>
         </div>
+
+        {canEdit && activeSubTab === 'assignments' && (
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => handleOpenAssignModal(null)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Plus size={15} />
+            <span>Assign Salary Structure</span>
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -246,70 +286,133 @@ export function SalaryStructureView() {
 
           {/* TAB 3: STAFF SALARY REGISTRY */}
           {activeSubTab === 'assignments' && (
-            <div className="table-responsive" style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '14px',
-              border: '1px solid #e2e8f0',
-              overflowX: 'auto',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-            }}>
-              <table className="employee-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th>Faculty / Staff Member</th>
-                    <th>Department & Designation</th>
-                    <th>Assigned Structure</th>
-                    <th style={{ textAlign: 'right' }}>Monthly Base Gross</th>
-                    <th style={{ textAlign: 'right' }}>Annual CTC</th>
-                    <th>Effective From</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assignments.map(a => (
-                    <tr key={a.id}>
-                      <td>
-                        <strong style={{ color: '#0f172a', display: 'block' }}>
-                          {a.first_name} {a.last_name}
-                        </strong>
-                        <span style={{ fontSize: '0.74rem', color: '#64748b', fontFamily: 'monospace' }}>
-                          {a.employee_code}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.82rem' }}>
-                          {a.designation_name}
-                        </div>
-                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                          {a.department_name}
-                        </div>
-                      </td>
-                      <td>
-                        <span className="badge badge-secondary" style={{ fontWeight: 600, fontSize: '0.75rem' }}>
-                          {a.structure_name || 'Standard Structure'}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
-                        ₹{Number(a.monthly_gross).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 600, color: '#2563eb' }}>
-                        ₹{Number(a.annual_ctc).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                        {a.effective_from ? new Date(a.effective_from).toLocaleDateString('en-GB') : '—'}
-                      </td>
-                      <td>
-                        <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
-                          Active
-                        </span>
-                      </td>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Search Toolbar */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                backgroundColor: '#ffffff',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ position: 'relative', width: '280px' }}>
+                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search staff, code, or structure..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    style={{ paddingLeft: '36px', height: '36px', fontSize: '0.84rem' }}
+                  />
+                </div>
+
+                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                  Showing {filteredAssignments.length} assigned staff records
+                </span>
+              </div>
+
+              <div className="table-responsive" style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '14px',
+                border: '1px solid #e2e8f0',
+                overflowX: 'auto',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+              }}>
+                <table className="employee-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th>Faculty / Staff Member</th>
+                      <th>Department & Designation</th>
+                      <th>Assigned Structure</th>
+                      <th style={{ textAlign: 'right' }}>Monthly Base Gross</th>
+                      <th style={{ textAlign: 'right' }}>Annual CTC</th>
+                      <th>Effective From</th>
+                      <th>Status</th>
+                      {canEdit && <th style={{ textAlign: 'right', width: '110px' }}>Actions</th>}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredAssignments.map(a => (
+                      <tr key={a.id}>
+                        <td>
+                          <strong style={{ color: '#0f172a', display: 'block' }}>
+                            {a.first_name} {a.last_name}
+                          </strong>
+                          <span style={{ fontSize: '0.74rem', color: '#64748b', fontFamily: 'monospace' }}>
+                            {a.employee_code}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.82rem' }}>
+                            {a.designation_name}
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                            {a.department_name}
+                          </div>
+                        </td>
+                        <td>
+                          <span className="badge badge-secondary" style={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                            {a.structure_name || 'Standard Structure'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
+                          ₹{Number(a.monthly_gross).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 600, color: '#2563eb' }}>
+                          ₹{Number(a.annual_ctc).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                          {a.effective_from ? new Date(a.effective_from).toLocaleDateString('en-GB') : '—'}
+                        </td>
+                        <td>
+                          <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
+                            Active
+                          </span>
+                        </td>
+                        {canEdit && (
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-xs"
+                              onClick={() => handleOpenAssignModal(a)}
+                              title="Update or change assigned salary structure"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <Edit3 size={12} />
+                              <span>Edit</span>
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>
+      )}
+
+      {/* Interactive Assign Salary Structure Modal */}
+      {isAssignModalOpen && (
+        <AssignSalaryModal
+          isOpen={isAssignModalOpen}
+          onClose={() => {
+            setIsAssignModalOpen(false);
+            setSelectedEmployeeForAssign(null);
+          }}
+          onAssigned={() => {
+            fetchData();
+          }}
+          initialEmployee={selectedEmployeeForAssign}
+          structures={structures}
+          employees={employees}
+        />
       )}
     </div>
   );

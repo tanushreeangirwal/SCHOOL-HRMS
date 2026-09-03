@@ -14,51 +14,46 @@ import {
   FileText,
   AlertCircle,
   Copy,
-  Check
+  Check,
+  DollarSign
 } from 'lucide-react';
 import { hrmsApi } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { StaffAvatar } from '../common/StaffAvatar';
+import AssignSalaryModal from '../payroll/AssignSalaryModal';
 
 export function EmployeeDetailModal({ employeeId, onClose }) {
+  const { isSuperAdmin, isAdmin, isHR } = useAuth();
+  const canManageSalary = isSuperAdmin || isAdmin || isHR;
+
   const [employee, setEmployee] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [copiedField, setCopiedField] = useState(null);
+  const [isAssignSalaryOpen, setIsAssignSalaryOpen] = useState(false);
+
+  const fetchDetails = async () => {
+    if (!employeeId) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await hrmsApi.getEmployeeById(employeeId);
+      if (response && response.success && response.data) {
+        setEmployee(response.data);
+      } else {
+        throw new Error(response?.message || 'Employee record not found.');
+      }
+    } catch (err) {
+      console.error('Error fetching employee details:', err);
+      setError(err.message || 'Failed to fetch employee details.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!employeeId) return;
-
-    let isMounted = true;
-    async function fetchDetails() {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await hrmsApi.getEmployeeById(employeeId);
-        if (isMounted) {
-          if (response && response.success && response.data) {
-            setEmployee(response.data);
-          } else {
-            throw new Error(response?.message || 'Employee record not found.');
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          console.error('Error fetching employee details:', err);
-          setError(err.message || 'Failed to fetch employee details.');
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
     fetchDetails();
-
-    return () => {
-      isMounted = false;
-    };
   }, [employeeId]);
 
   const copyToClipboard = (text, fieldName) => {
@@ -332,6 +327,65 @@ export function EmployeeDetailModal({ employeeId, onClose }) {
                 </div>
               </div>
 
+              {/* 5. Compensation & Salary Structure */}
+              <div className="detail-card">
+                <div className="detail-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <DollarSign size={17} className="detail-icon" style={{ color: '#16a34a' }} />
+                    <h3>Compensation & Salary Structure</h3>
+                  </div>
+                  {canManageSalary && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs"
+                      onClick={() => setIsAssignSalaryOpen(true)}
+                      style={{ fontSize: '0.74rem', color: '#2563eb', fontWeight: 600 }}
+                    >
+                      {employee.salary_structure_name ? 'Change Structure' : '+ Assign Structure'}
+                    </button>
+                  )}
+                </div>
+                <div className="detail-grid">
+                  <div className="detail-item full-width">
+                    <span className="detail-label">Assigned Salary Structure</span>
+                    <span className="detail-value font-medium">
+                      {employee.salary_structure_name ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ color: '#0f172a', fontWeight: 700 }}>{employee.salary_structure_name}</span>
+                          <span className="table-code-badge text-monospace">{employee.salary_structure_code}</span>
+                        </span>
+                      ) : (
+                        <span className="unassigned-badge">No Salary Structure Assigned</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Monthly Base Gross</span>
+                    <span className="detail-value font-bold" style={{ color: '#16a34a', fontSize: '0.92rem' }}>
+                      {employee.monthly_gross 
+                        ? `₹${Number(employee.monthly_gross).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                        : '—'
+                      }
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Annual CTC</span>
+                    <span className="detail-value font-bold" style={{ color: '#2563eb', fontSize: '0.92rem' }}>
+                      {employee.annual_ctc 
+                        ? `₹${Number(employee.annual_ctc).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                        : '—'
+                      }
+                    </span>
+                  </div>
+                  <div className="detail-item full-width">
+                    <span className="detail-label">Effective From</span>
+                    <span className="detail-value">
+                      {employee.salary_effective_from ? formatDate(employee.salary_effective_from) : 'Active'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* System Audit Metadata Footer */}
               <div className="detail-meta-footer full-width-span">
                 <div className="meta-col">
@@ -369,6 +423,18 @@ export function EmployeeDetailModal({ employeeId, onClose }) {
           </div>
         </div>
       </div>
+
+      {/* Assign Salary Modal from Profile */}
+      {isAssignSalaryOpen && (
+        <AssignSalaryModal
+          isOpen={isAssignSalaryOpen}
+          onClose={() => setIsAssignSalaryOpen(false)}
+          onAssigned={() => {
+            fetchDetails();
+          }}
+          initialEmployee={employee}
+        />
+      )}
     </div>
   );
 }

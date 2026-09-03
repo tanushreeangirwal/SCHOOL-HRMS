@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   FileSpreadsheet, 
@@ -22,6 +22,13 @@ export function PayrollModule({
   const [activeTab, setActiveTab] = useState(payrollSubTab || 'dashboard');
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+
+  // Synchronize activeTab when payrollSubTab prop changes (e.g. from Sidebar clicks)
+  useEffect(() => {
+    if (payrollSubTab) {
+      setActiveTab(payrollSubTab);
+    }
+  }, [payrollSubTab]);
 
   // Modal states
   const [isProcessingModalOpen, setIsProcessingModalOpen] = useState(false);
