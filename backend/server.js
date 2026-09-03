@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
@@ -12,10 +13,17 @@ const leaveRoutes = require("./routes/leaves");
 const calendarRoutes = require("./routes/academicCalendar");
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
+// Middleware - Configure CORS for production domains and local development
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map(origin => origin.trim())
+  : true;
+
+app.use(cors({
+  origin: corsOrigins,
+  credentials: true
+}));
 app.use(express.json());
 
 // Health check
@@ -53,5 +61,5 @@ app.use("/api/employees", employeeRoutes);
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`St. Vincent's School HRMS backend running on http://localhost:${PORT}`);
+  console.log(`St. Vincent's School HRMS backend running on port ${PORT}`);
 });

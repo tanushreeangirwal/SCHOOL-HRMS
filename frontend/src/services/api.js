@@ -87,7 +87,7 @@ async function request(endpoint, options = {}) {
     return data;
   } catch (err) {
     if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
-      const connErr = new Error('Cannot connect to St. Vincent\'s backend server (http://localhost:5000). Please ensure backend is running.');
+      const connErr = new Error(`Cannot connect to St. Vincent's backend server (${API_BASE_URL}). Please ensure backend is running.`);
       connErr.isNetworkError = true;
       throw connErr;
     }
