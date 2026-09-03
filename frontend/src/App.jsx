@@ -12,6 +12,7 @@ import EmployeeDetailModal from './components/employees/EmployeeDetailModal';
 import AddEmployeeModal from './components/employees/AddEmployeeModal';
 import EmployeeDashboardView from './components/dashboard/EmployeeDashboardView';
 import MyAttendanceView from './components/attendance/MyAttendanceView';
+import MarkAttendanceView from './components/attendance/MarkAttendanceView';
 import MyShiftView from './components/attendance/MyShiftView';
 import DashboardView from './components/dashboard/DashboardView';
 import DepartmentListView from './components/departments/DepartmentListView';
@@ -35,6 +36,8 @@ import MarkAttendanceModal from './components/attendance/MarkAttendanceModal';
 import AttendanceAuditModal from './components/attendance/AttendanceAuditModal';
 import { LeaveModuleView } from './components/leave/LeaveModuleView';
 import { AcademicCalendarModule } from './components/calendar/AcademicCalendarModule';
+import PayrollModule from './components/payroll/PayrollModule';
+import MyPayslipsView from './components/payroll/MyPayslipsView';
 import Toast from './components/common/Toast';
 import { TableSkeleton, LoadingSpinner } from './components/common/LoadingSpinner';
 import EmptyState from './components/common/EmptyState';
@@ -65,9 +68,20 @@ function MainAppShell() {
   // Academic Calendar Sub-Navigation State: 'overview' | 'holidays' | 'terms' | 'years'
   const [calendarSubTab, setCalendarSubTab] = useState('overview');
 
+  // Payroll Sub-Navigation State: 'dashboard' | 'records' | 'structures'
+  const [payrollSubTab, setPayrollSubTab] = useState('dashboard');
+
+  // Mobile Navigation Drawer State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Auto-close mobile drawer on navigation
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [activeView, departmentSubTab, shiftSubTab, attendanceSubTab, leaveSubTab, calendarSubTab, payrollSubTab]);
+
   // Guard: if Employee tries to access restricted administrative modules, redirect to dashboard
   useEffect(() => {
-    if (isEmployee && (activeView === 'departments' || activeView === 'designations' || activeView === 'shifts' || activeView === 'attendance')) {
+    if (isEmployee && (activeView === 'departments' || activeView === 'designations' || activeView === 'shifts' || activeView === 'attendance' || activeView === 'payroll')) {
       setActiveView('dashboard');
     }
   }, [isEmployee, activeView]);
@@ -699,6 +713,13 @@ function MainAppShell() {
       {/* Toast Notification */}
       <Toast toast={toast} onClose={() => setToast(null)} />
 
+      {/* Mobile Sidebar Overlay Backdrop */}
+      <div 
+        className={`sidebar-backdrop ${isMobileMenuOpen ? 'open' : ''}`}
+        onClick={() => setIsMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
+
       {/* Left Navigation Sidebar */}
       <Sidebar
         activeView={activeView}
@@ -715,10 +736,14 @@ function MainAppShell() {
         setLeaveSubTab={setLeaveSubTab}
         calendarSubTab={calendarSubTab}
         setCalendarSubTab={setCalendarSubTab}
+        payrollSubTab={payrollSubTab}
+        setPayrollSubTab={setPayrollSubTab}
         employeeCount={employees.length}
         departmentCount={departments.length}
         designationCount={designations.length}
         shiftCount={shifts.filter(s => s.is_active).length}
+        isMobileMenuOpen={isMobileMenuOpen}
+        onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
         onOpen2FAModal={() => setIs2FAModalOpen(true)}
         onOpenAddDepartment={() => { setEditingDepartment(null); setIsAddDeptModalOpen(true); }}
         onOpenAddDesignation={() => { setEditingDesignation(null); setIsAddDesignationModalOpen(true); }}
@@ -737,10 +762,12 @@ function MainAppShell() {
           attendanceSubTab={attendanceSubTab}
           leaveSubTab={leaveSubTab}
           calendarSubTab={calendarSubTab}
+          payrollSubTab={payrollSubTab}
           selectedEmployeeName={selectedEmployeeName}
           selectedDepartmentName={selectedDepartmentName}
           selectedDesignationName={selectedDesignationName}
           selectedShiftName={selectedShiftName}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
           onAddEmployee={() => setIsAddEmployeeModalOpen(true)}
           onAddDepartment={() => { setEditingDepartment(null); setIsAddDeptModalOpen(true); }}
           onAddDesignation={() => { setEditingDesignation(null); setIsAddDesignationModalOpen(true); }}
@@ -902,9 +929,13 @@ function MainAppShell() {
                   onNavigateToMarkAttendance={() => setAttendanceSubTab('mark')}
                 />
               ) : (
-                <EmployeeDashboardView
-                  onNavigateToAttendanceHistory={() => setAttendanceSubTab('history')}
-                  onNavigateToMyShift={() => setActiveView('my-shift')}
+                <MarkAttendanceView
+                  onNavigateToHistory={() => setAttendanceSubTab('history')}
+                  onOpenAdminMarkModal={() => handleOpenMarkAttendanceModal()}
+                  onNavigateToDailyRoster={() => {
+                    setActiveView('attendance');
+                    setAttendanceSubTab('daily');
+                  }}
                 />
               )}
             </div>
@@ -1047,6 +1078,24 @@ function MainAppShell() {
           {activeView === 'calendar' && (
             <div className="calendar-module-shell">
               <AcademicCalendarModule initialTab={calendarSubTab} />
+            </div>
+          )}
+
+          {/* VIEW 11: PAYROLL MANAGEMENT (ADMIN / HR / SUPER ADMIN) */}
+          {activeView === 'payroll' && (
+            <div className="payroll-module-shell">
+              <PayrollModule 
+                payrollSubTab={payrollSubTab} 
+                setPayrollSubTab={setPayrollSubTab} 
+                departments={departments} 
+              />
+            </div>
+          )}
+
+          {/* VIEW 12: MY PAYSLIPS (EMPLOYEE / TEACHER SELF-SERVICE) */}
+          {activeView === 'my-payslips' && (
+            <div className="my-payslips-module-shell">
+              <MyPayslipsView />
             </div>
           )}
         </main>

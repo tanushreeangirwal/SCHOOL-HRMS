@@ -104,6 +104,57 @@ export function HolidaysView({
     }
   };
 
+  // Category filter tabs
+  const [activeCategoryTab, setActiveCategoryTab] = useState('ALL');
+
+  // Filter events based on activeCategoryTab
+  const categoryFilteredEvents = useMemo(() => {
+    if (activeCategoryTab === 'ALL') return events;
+    if (activeCategoryTab === 'EXAMS') {
+      return events.filter(e => 
+        (e.category && e.category.toLowerCase().includes('exam')) || 
+        (e.category && e.category.toLowerCase().includes('test')) ||
+        (e.title && e.title.toLowerCase().includes('exam')) ||
+        (e.title && e.title.toLowerCase().includes('test'))
+      );
+    }
+    if (activeCategoryTab === 'HOLIDAYS') {
+      return events.filter(e => e.event_type === 'Holiday');
+    }
+    if (activeCategoryTab === 'EVENTS') {
+      return events.filter(e => 
+        (e.category && (e.category.toLowerCase().includes('event') || e.category.toLowerCase().includes('annual') || e.category.toLowerCase().includes('sports') || e.category.toLowerCase().includes('meet'))) ||
+        (e.title && (e.title.toLowerCase().includes('day') || e.title.toLowerCase().includes('meet') || e.title.toLowerCase().includes('annual')))
+      );
+    }
+    if (activeCategoryTab === 'STAFF') {
+      return events.filter(e => 
+        (e.category && (e.category.toLowerCase().includes('training') || e.category.toLowerCase().includes('administrative') || e.category.toLowerCase().includes('planning'))) ||
+        (e.title && e.title.toLowerCase().includes('training'))
+      );
+    }
+    if (activeCategoryTab === 'CLOSURES') {
+      return events.filter(e => e.event_type === 'School Closure');
+    }
+    if (activeCategoryTab === 'OVERRIDES') {
+      return events.filter(e => e.event_type === 'Working Day Override');
+    }
+    return events;
+  }, [events, activeCategoryTab]);
+
+  const handleOpenAddModal = (type = 'Holiday', defaultCat = 'Public Holiday') => {
+    setEditingEvent({
+      event_type: type,
+      category: defaultCat,
+      title: '',
+      start_date: new Date().toISOString().split('T')[0],
+      end_date: new Date().toISOString().split('T')[0],
+      description: '',
+      is_working_day: type === 'Working Day Override'
+    });
+    setIsModalOpen(true);
+  };
+
   return (
     <div className="holidays-view">
       {/* 1. Header & Actions */}
@@ -116,15 +167,15 @@ export function HolidaysView({
         gap: '12px'
       }}>
         <div>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-            Holidays, Closures & School Events
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#172033', margin: 0, letterSpacing: '-0.01em' }}>
+            Events, Examinations & Holidays Console
           </h3>
           <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '2px 0 0' }}>
-            Comprehensive institutional registry of gazetted holidays, breaks, non-instructional days, and schedule overrides.
+            Configure and precisely manage exam schedules, institutional holidays, term tests, staff workshops, and campus closures.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <button
             type="button"
             className="btn btn-secondary btn-sm"
@@ -136,19 +187,120 @@ export function HolidaysView({
           </button>
 
           {canManage && (
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={() => {
-                setEditingEvent(null);
-                setIsModalOpen(true);
-              }}
-            >
-              <Plus size={15} />
-              <span>Add Holiday / Event</span>
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => handleOpenAddModal('Non-Instructional', 'Mid-Term Examination')}
+                style={{ color: '#3155D9', fontWeight: 600 }}
+              >
+                <Plus size={14} />
+                <span>+ Add Exam</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => handleOpenAddModal('Holiday', 'Public Holiday')}
+                style={{ color: '#dc2626', fontWeight: 600 }}
+              >
+                <Plus size={14} />
+                <span>+ Add Holiday</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  setEditingEvent(null);
+                  setIsModalOpen(true);
+                }}
+              >
+                <Plus size={15} />
+                <span>+ New Calendar Entry</span>
+              </button>
+            </>
           )}
         </div>
+      </div>
+
+      {/* Category Navigation Pills */}
+      <div className="category-pills-scrollable" style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        marginBottom: '14px',
+        overflowX: 'auto',
+        flexWrap: 'nowrap',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        backgroundColor: '#ffffff',
+        padding: '6px 8px',
+        borderRadius: '10px',
+        border: '1px solid #e2e8f0'
+      }}>
+        <button
+          type="button"
+          className={`btn btn-xs ${activeCategoryTab === 'ALL' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveCategoryTab('ALL')}
+          style={{ fontSize: '0.78rem', padding: '5px 12px' }}
+        >
+          All Calendar Entries ({events.length})
+        </button>
+
+        <button
+          type="button"
+          className={`btn btn-xs ${activeCategoryTab === 'EXAMS' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveCategoryTab('EXAMS')}
+          style={{ fontSize: '0.78rem', padding: '5px 12px' }}
+        >
+          📝 Examinations & Tests
+        </button>
+
+        <button
+          type="button"
+          className={`btn btn-xs ${activeCategoryTab === 'HOLIDAYS' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveCategoryTab('HOLIDAYS')}
+          style={{ fontSize: '0.78rem', padding: '5px 12px' }}
+        >
+          🏖️ Holidays & Vacations
+        </button>
+
+        <button
+          type="button"
+          className={`btn btn-xs ${activeCategoryTab === 'EVENTS' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveCategoryTab('EVENTS')}
+          style={{ fontSize: '0.78rem', padding: '5px 12px' }}
+        >
+          🏆 School Events & Annual Day
+        </button>
+
+        <button
+          type="button"
+          className={`btn btn-xs ${activeCategoryTab === 'STAFF' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveCategoryTab('STAFF')}
+          style={{ fontSize: '0.78rem', padding: '5px 12px' }}
+        >
+          👥 Staff & Training Days
+        </button>
+
+        <button
+          type="button"
+          className={`btn btn-xs ${activeCategoryTab === 'CLOSURES' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveCategoryTab('CLOSURES')}
+          style={{ fontSize: '0.78rem', padding: '5px 12px' }}
+        >
+          ⚠️ School Closures
+        </button>
+
+        <button
+          type="button"
+          className={`btn btn-xs ${activeCategoryTab === 'OVERRIDES' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveCategoryTab('OVERRIDES')}
+          style={{ fontSize: '0.78rem', padding: '5px 12px' }}
+        >
+          🔄 Working Overrides
+        </button>
       </div>
 
       {/* Feedback Banner */}
@@ -188,7 +340,7 @@ export function HolidaysView({
           <input
             type="text"
             className="form-control"
-            placeholder="Search events, holidays, circulars..."
+            placeholder="Search by title, exam, holiday, category..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             style={{ paddingLeft: '36px', fontSize: '0.84rem' }}
@@ -210,20 +362,6 @@ export function HolidaysView({
           ))}
         </select>
 
-        {/* Event Type Filter */}
-        <select
-          className="form-control"
-          style={{ width: '180px', fontSize: '0.84rem' }}
-          value={selectedType}
-          onChange={e => setSelectedType(e.target.value)}
-        >
-          <option value="ALL">All Event Types</option>
-          <option value="Holiday">Holidays Only</option>
-          <option value="Non-Instructional">Non-Instructional Days</option>
-          <option value="School Closure">School Closures</option>
-          <option value="Working Day Override">Working Overrides</option>
-        </select>
-
         {/* Status Filter */}
         <select
           className="form-control"
@@ -238,34 +376,35 @@ export function HolidaysView({
       </div>
 
       {/* 3. Holidays & Closures Table */}
-      <div style={{
+      <div className="table-responsive" style={{
         backgroundColor: '#ffffff',
         borderRadius: '14px',
         border: '1px solid #e2e8f0',
-        overflow: 'hidden',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
         boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
       }}>
         {isLoading ? (
           <TableSkeleton rows={5} />
-        ) : events.length === 0 ? (
+        ) : categoryFilteredEvents.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-            No calendar events found matching your criteria.
+            No calendar events or examination dates found matching this category.
           </div>
         ) : (
-          <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="employee-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
-                <th style={{ padding: '12px 16px', fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>DATE / PERIOD</th>
-                <th style={{ padding: '12px 16px', fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>EVENT TITLE</th>
-                <th style={{ padding: '12px 16px', fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>TYPE & CATEGORY</th>
-                <th style={{ padding: '12px 16px', fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>ACADEMIC TERM</th>
-                <th style={{ padding: '12px 16px', fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>STAFF WORK</th>
-                <th style={{ padding: '12px 16px', fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>STATUS</th>
-                {canManage && <th style={{ padding: '12px 16px', fontSize: '0.78rem', fontWeight: 700, color: '#475569', textAlign: 'right' }}>ACTIONS</th>}
+              <tr>
+                <th style={{ width: '180px' }}>Date / Period</th>
+                <th style={{ minWidth: '220px' }}>Event & Subject</th>
+                <th style={{ minWidth: '200px' }}>Category & Scope</th>
+                <th style={{ minWidth: '160px' }}>Academic Term</th>
+                <th style={{ width: '120px' }}>Campus Impact</th>
+                <th style={{ width: '100px' }}>Status</th>
+                {canManage && <th style={{ width: '180px', textAlign: 'right' }}>Actions</th>}
               </tr>
             </thead>
             <tbody>
-              {events.map((ev) => {
+              {categoryFilteredEvents.map((ev) => {
                 const startDateStr = new Date(ev.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                 const endDateStr = new Date(ev.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                 const isSingleDay = ev.start_date === ev.end_date || ev.total_days === 1;
@@ -274,16 +413,18 @@ export function HolidaysView({
                 const isClosure = ev.event_type === 'School Closure';
                 const isNonInst = ev.event_type === 'Non-Instructional';
                 const isOverride = ev.event_type === 'Working Day Override';
+                const isExam = (ev.category && ev.category.toLowerCase().includes('exam')) || (ev.title && ev.title.toLowerCase().includes('exam'));
 
-                let badgeColor = '#2563eb';
-                let badgeBg = '#eff6ff';
+                let badgeColor = '#3155D9';
+                let badgeBg = '#eef2ff';
                 if (isHoliday) { badgeColor = '#dc2626'; badgeBg = '#fef2f2'; }
                 else if (isClosure) { badgeColor = '#e11d48'; badgeBg = '#fff1f2'; }
+                else if (isExam) { badgeColor = '#d97706'; badgeBg = '#fef3c7'; }
                 else if (isNonInst) { badgeColor = '#7c3aed'; badgeBg = '#f5f3ff'; }
                 else if (isOverride) { badgeColor = '#059669'; badgeBg = '#ecfdf5'; }
 
                 return (
-                  <tr key={ev.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <tr key={ev.id} className="employee-table-row">
                     <td style={{ padding: '14px 16px', fontSize: '0.84rem', color: '#0f172a', fontWeight: 600 }}>
                       <div>{startDateStr}</div>
                       {!isSingleDay && (
@@ -309,7 +450,22 @@ export function HolidaysView({
                       </div>
                       {ev.description && (
                         <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px', maxWidth: '380px' }}>
-                          {ev.description}
+                          {ev.description.replace(/\[INCLUDE_SATURDAY\]|\[INCLUDES_SATURDAY\]|\[INCLUDE_SUNDAY\]|\[INCLUDES_SUNDAY\]/g, '').trim()}
+                        </div>
+                      )}
+                      {isExam && (
+                        <div style={{ marginTop: '5px' }}>
+                          <span style={{
+                            fontSize: '0.68rem',
+                            fontWeight: 600,
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            backgroundColor: (ev.description && (ev.description.includes('SATURDAY') || ev.description.includes('SUNDAY'))) ? '#fef3c7' : '#f0fdf4',
+                            color: (ev.description && (ev.description.includes('SATURDAY') || ev.description.includes('SUNDAY'))) ? '#b45309' : '#15803d',
+                            display: 'inline-block'
+                          }}>
+                            {(ev.description && (ev.description.includes('SATURDAY') || ev.description.includes('SUNDAY'))) ? 'Includes Weekend Schedule' : 'Mon–Fri Only (Excludes Sat & Sun)'}
+                          </span>
                         </div>
                       )}
                     </td>

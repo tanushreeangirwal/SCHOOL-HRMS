@@ -24,6 +24,7 @@ import DayDetailModal from './DayDetailModal';
 
 export function CalendarOverviewView({
   onAddEvent,
+  onEditEvent,
   onViewHolidays,
   onViewYears,
   onViewTerms,
@@ -330,44 +331,52 @@ export function CalendarOverviewView({
             </div>
           </div>
 
-          {/* Calendar Day of Week Header */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, 1fr)',
-            backgroundColor: '#f8fafc',
-            borderBottom: '1px solid #e2e8f0',
-            textAlign: 'center',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            color: '#64748b',
-            padding: '8px 0'
-          }}>
-            <div style={{ color: '#dc2626' }}>SUN</div>
-            <div>MON</div>
-            <div>TUE</div>
-            <div>WED</div>
-            <div>THU</div>
-            <div>FRI</div>
-            <div style={{ color: '#475569' }}>SAT</div>
+          {/* Mobile swipe instruction */}
+          <div className="mobile-calendar-hint">
+            👉 Swipe horizontally to see all days • Tap any date to view exams or holidays
           </div>
 
-          {/* Calendar Grid Matrix */}
-          {isLoading ? (
-            <div style={{ padding: '40px', textAlign: 'center' }}>
-              <LoadingSpinner text="Rendering school calendar matrix..." />
-            </div>
-          ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(7, 1fr)',
-              gridAutoRows: 'minmax(90px, auto)',
-              gap: '1px',
-              backgroundColor: '#e2e8f0'
-            }}>
-              {/* Blank cells for start offset */}
-              {Array.from({ length: monthStartOffset }).map((_, i) => (
-                <div key={`empty-${i}`} style={{ backgroundColor: '#fafbfc' }} />
-              ))}
+          {/* Calendar Grid Wrapper for Smooth Horizontal Mobile Scroll */}
+          <div className="calendar-grid-wrapper" style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ minWidth: '640px', width: '100%' }}>
+              {/* Calendar Day of Week Header */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(7, 1fr)',
+                backgroundColor: '#f8fafc',
+                borderBottom: '1px solid #e2e8f0',
+                textAlign: 'center',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: '#64748b',
+                padding: '8px 0'
+              }}>
+                <div style={{ color: '#dc2626' }}>SUN</div>
+                <div>MON</div>
+                <div>TUE</div>
+                <div>WED</div>
+                <div>THU</div>
+                <div>FRI</div>
+                <div style={{ color: '#475569' }}>SAT</div>
+              </div>
+
+              {/* Calendar Grid Matrix */}
+              {isLoading ? (
+                <div style={{ padding: '40px', textAlign: 'center' }}>
+                  <LoadingSpinner text="Rendering school calendar matrix..." />
+                </div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  gridAutoRows: 'minmax(90px, auto)',
+                  gap: '1px',
+                  backgroundColor: '#e2e8f0'
+                }}>
+                  {/* Blank cells for start offset */}
+                  {Array.from({ length: monthStartOffset }).map((_, i) => (
+                    <div key={`empty-${i}`} style={{ backgroundColor: '#fafbfc' }} />
+                  ))}
 
               {/* Month Days */}
               {monthData?.days?.map((day) => {
@@ -471,6 +480,8 @@ export function CalendarOverviewView({
               })}
             </div>
           )}
+            </div>
+          </div>
 
           {/* Calendar Footer Legend */}
           <div style={{
@@ -645,6 +656,25 @@ export function CalendarOverviewView({
           }}
           onAddEventOnDate={(date) => {
             if (onAddEvent) onAddEvent(date);
+          }}
+          onEditEvent={(ev) => {
+            setIsDayModalOpen(false);
+            setSelectedDayData(null);
+            if (onEditEvent) onEditEvent(ev);
+          }}
+          onDeleteEvent={async (ev) => {
+            if (!window.confirm(`Delete calendar event "${ev.title}"?`)) return;
+            try {
+              const res = await hrmsApi.deleteCalendarEvent(ev.id);
+              if (res && res.success) {
+                setIsDayModalOpen(false);
+                setSelectedDayData(null);
+                fetchData(true);
+              }
+            } catch (err) {
+              console.error('Error deleting event:', err);
+              alert(err.message || 'Failed to delete event.');
+            }
           }}
           canManage={canManage}
         />

@@ -15,7 +15,10 @@ import {
   Calendar,
   CalendarRange,
   User,
-  FileText
+  FileText,
+  X,
+  DollarSign,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import StVincentsLogo from '../common/StVincentsLogo';
@@ -35,10 +38,14 @@ export function Sidebar({
   setLeaveSubTab,
   calendarSubTab = 'overview',
   setCalendarSubTab,
+  payrollSubTab = 'dashboard',
+  setPayrollSubTab,
   employeeCount = 0,
   departmentCount = 0,
   designationCount = 0,
   shiftCount = 0,
+  isMobileMenuOpen = false,
+  onCloseMobileMenu,
   onOpen2FAModal,
   onOpenAddDepartment,
   onOpenAddDesignation,
@@ -54,6 +61,7 @@ export function Sidebar({
   const [isAttendanceSubmenuOpen, setIsAttendanceSubmenuOpen] = useState(activeView === 'attendance');
   const [isLeaveSubmenuOpen, setIsLeaveSubmenuOpen] = useState(activeView === 'leave');
   const [isCalendarSubmenuOpen, setIsCalendarSubmenuOpen] = useState(activeView === 'calendar');
+  const [isPayrollSubmenuOpen, setIsPayrollSubmenuOpen] = useState(activeView === 'payroll');
   const [isMyAttendanceSubmenuOpen, setIsMyAttendanceSubmenuOpen] = useState(activeView === 'my-attendance');
   const [isEmpSubmenuOpen, setIsEmpSubmenuOpen] = useState(activeView === 'employees');
 
@@ -72,6 +80,7 @@ export function Sidebar({
   const canViewShifts = !isEmployee && (hasPermission('shifts:read') || isSuperAdmin || isAdmin || isHR || isManager);
   const canViewAttendance = !isEmployee && (hasPermission('attendance:read') || isSuperAdmin || isAdmin || isHR || isManager);
   const canViewEmployeeDirectory = !isEmployee && (hasPermission('employees:read') || isSuperAdmin || isAdmin || isHR || isManager);
+  const canViewPayroll = !isEmployee && (hasPermission('payroll:read') || isSuperAdmin || isAdmin || isHR || isManager);
 
   const getDashboardLabel = () => {
     if (isSuperAdmin) return 'Executive Dashboard';
@@ -95,15 +104,23 @@ export function Sidebar({
     : (user?.email ? user.email.slice(0, 2).toUpperCase() : 'SV');
 
   return (
-    <aside className="sidebar-clean" aria-label="Main Navigation">
+    <aside className={`sidebar-clean ${isMobileMenuOpen ? 'mobile-open' : ''}`} aria-label="Main Navigation">
       {/* Brand Header */}
-      <div className="sidebar-clean-header">
+      <div className="sidebar-clean-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
         <StVincentsLogo 
           size={42} 
           title="St. Vincent's School" 
           subtitle="Human Resource System" 
-          theme="dark"
+          theme="light"
         />
+        <button
+          type="button"
+          className="mobile-sidebar-close-btn"
+          onClick={onCloseMobileMenu}
+          aria-label="Close navigation menu"
+        >
+          <X size={20} />
+        </button>
       </div>
 
       {/* Navigation List */}
@@ -237,16 +254,18 @@ export function Sidebar({
               {activeView === 'calendar' && <div className="clean-active-indicator"></div>}
             </button>
 
-            {/* 7. My Payslips (Coming Soon) */}
-            <div className="clean-nav-item" style={{ opacity: 0.6, cursor: 'default' }} title="Payroll & Payslips Module — Coming Soon">
+            {/* 7. My Payslips */}
+            <button
+              type="button"
+              className={`clean-nav-item ${activeView === 'my-payslips' ? 'active' : ''}`}
+              onClick={() => setActiveView('my-payslips')}
+            >
               <div className="clean-nav-left">
-                <FileText size={18} className="clean-nav-icon" />
+                <CreditCard size={18} className="clean-nav-icon" />
                 <span className="clean-nav-text">My Payslips</span>
               </div>
-              <div className="clean-nav-right">
-                <span className="clean-nav-badge" style={{ backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '0.65rem' }}>Soon</span>
-              </div>
-            </div>
+              {activeView === 'my-payslips' && <div className="clean-active-indicator"></div>}
+            </button>
           </>
         ) : (
           /* =============================================================== */
@@ -851,6 +870,74 @@ export function Sidebar({
                 </div>
               )}
             </div>
+
+            {/* 10. Payroll Management */}
+            {canViewPayroll && (
+              <div className="clean-nav-group">
+                <button
+                  type="button"
+                  className={`clean-nav-item ${activeView === 'payroll' ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveView('payroll');
+                    setIsPayrollSubmenuOpen(!isPayrollSubmenuOpen);
+                  }}
+                >
+                  <div className="clean-nav-left">
+                    <DollarSign size={18} className="clean-nav-icon" />
+                    <span className="clean-nav-text">Payroll</span>
+                  </div>
+                  <div className="clean-nav-right">
+                    {isPayrollSubmenuOpen ? (
+                      <ChevronDown size={14} className="clean-chevron" />
+                    ) : (
+                      <ChevronRight size={14} className="clean-chevron" />
+                    )}
+                  </div>
+                  {activeView === 'payroll' && <div className="clean-active-indicator"></div>}
+                </button>
+
+                {/* Submenu for Payroll */}
+                {isPayrollSubmenuOpen && (
+                  <div className="clean-subnav-container">
+                    <button
+                      type="button"
+                      className={`clean-subnav-btn ${activeView === 'payroll' && payrollSubTab === 'dashboard' ? 'active' : ''}`}
+                      onClick={() => {
+                        setActiveView('payroll');
+                        if (setPayrollSubTab) setPayrollSubTab('dashboard');
+                      }}
+                    >
+                      <span className="subnav-dot">•</span>
+                      <span>Payroll Dashboard</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`clean-subnav-btn ${activeView === 'payroll' && payrollSubTab === 'records' ? 'active' : ''}`}
+                      onClick={() => {
+                        setActiveView('payroll');
+                        if (setPayrollSubTab) setPayrollSubTab('records');
+                      }}
+                    >
+                      <span className="subnav-dot">•</span>
+                      <span>Employee Register</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`clean-subnav-btn ${activeView === 'payroll' && payrollSubTab === 'structures' ? 'active' : ''}`}
+                      onClick={() => {
+                        setActiveView('payroll');
+                        if (setPayrollSubTab) setPayrollSubTab('structures');
+                      }}
+                    >
+                      <span className="subnav-dot">•</span>
+                      <span>Salary Structures</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
 

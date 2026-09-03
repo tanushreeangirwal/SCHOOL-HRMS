@@ -9,7 +9,9 @@ import {
   XCircle, 
   Layers, 
   FileText,
-  Plus
+  Plus,
+  Edit,
+  Trash2
 } from 'lucide-react';
 
 export function DayDetailModal({
@@ -17,6 +19,8 @@ export function DayDetailModal({
   isOpen,
   onClose,
   onAddEventOnDate,
+  onEditEvent,
+  onDeleteEvent,
   canManage = false
 }) {
   if (!isOpen || !dayData) return null;
@@ -185,8 +189,39 @@ export function DayDetailModal({
 
                       {ev.description && (
                         <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#475569', lineHeight: 1.4 }}>
-                          {ev.description}
+                          {ev.description.replace(/\[INCLUDE_SATURDAY\]|\[INCLUDES_SATURDAY\]|\[INCLUDE_SUNDAY\]|\[INCLUDES_SUNDAY\]/g, '').trim()}
                         </p>
+                      )}
+
+                      {canManage && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-xs"
+                            onClick={() => {
+                              onClose();
+                              if (onEditEvent) onEditEvent(ev);
+                            }}
+                            style={{ fontSize: '0.75rem', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            title="Edit this event"
+                          >
+                            <Edit size={12} />
+                            <span>Edit Event</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs"
+                            onClick={() => {
+                              onClose();
+                              if (onDeleteEvent) onDeleteEvent(ev);
+                            }}
+                            style={{ fontSize: '0.75rem', padding: '3px 8px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            title="Delete this event"
+                          >
+                            <Trash2 size={12} />
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       )}
                     </div>
                   );

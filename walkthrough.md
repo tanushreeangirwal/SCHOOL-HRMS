@@ -99,8 +99,9 @@ All components built in `frontend/src/components/calendar/`:
 - **`AcademicYearsView.jsx`**: Session management table with single-click `Set Active` transaction.
 - **`TermsView.jsx`**: School terms registry with date range validation.
 - **`HolidaysView.jsx`**: Full searchable registry of holidays, breaks, and closures with multi-attribute filtering (Year, Type, Status).
-- **`AddEditEventModal.jsx`**: Compact modal with dynamic categories, multi-day auto duration calculation, and staff working day toggles.
-- **`AddEditYearModal.jsx` & `AddEditTermModal.jsx`**: Boundary validation dialogs.
+- **`AddEditEventModal.jsx`**: Compact modal with dynamic categories, multi-day auto duration calculation, and staff working day toggles. 
+  - **Weekend Examination Exclusion (Sat/Sun Protection)**: By default, any examination or test spanning across weekends never schedules or displays on Saturday or Sunday. Duration count automatically computes effective instructional days (e.g. Friday to Tuesday counts as 3 Exam Days: Fri, Mon, Tue). Explicit opt-in checkboxes provided for weekend scheduling.
+- **`AddEditYearModal.jsx`** & **`AddEditTermModal.jsx`**: Boundary validation dialogs.
 
 ---
 
@@ -108,4 +109,26 @@ All components built in `frontend/src/components/calendar/`:
 
 1. **Automated Calendar API Test Suite**: **11 / 11 tests passed (100%)**.
 2. **End-to-End System Test Suite**: **7 / 7 tests passed (100%)** covering Auth, HR data, Attendance, Leave, and Academic Calendar across all 5 user roles.
-3. **Frontend Production Build**: Vite compiled **1,877 modules in 1.15s** with **0 errors**.
+3. **Frontend Production Build**: Vite compiled **1,879 modules in 2.57s** with **0 errors**.
+
+---
+
+## 5. Mobile & Tablet Responsiveness System
+
+1. **Mobile Drawer Navigation (`Sidebar.jsx` & `App.jsx`)**:
+   - On screens `<= 992px`, the navigation sidebar collapses into a fixed slide-over drawer (`left: -290px` to `translateX(290px)`).
+   - Semi-transparent backdrop overlay with subtle blur (`.sidebar-backdrop`) covers the page when open.
+   - Touching the backdrop or navigating to any module automatically closes the drawer.
+   - Dedicated `[ X ]` close button in the mobile sidebar header.
+2. **Mobile Header & Hamburger Toggle (`Header.jsx`)**:
+   - Modern hamburger button (`[ Menu ]`) appears on the top-left of the header bar on mobile devices.
+   - Long page subtitles, breadcrumb root badges, and desktop date pills automatically collapse on small screens to prevent horizontal overflow.
+   - Compact profile avatar and today's attendance check-in/out pill fit seamlessly.
+3. **Academic Calendar Mobile Adaptations**:
+   - **Sub-Tab Navigation Bar**: Horizontally scrollable pill container with momentum touch scrolling (`-webkit-overflow-scrolling: touch; scrollbar-width: none;`).
+   - **Monthly Calendar Grid (`CalendarOverviewView.jsx`)**: Wrapped in a responsive horizontal scroll container (`min-width: 640px`) with a mobile helper hint (`👉 Swipe horizontally to view all weekdays • Tap any date for details`) so 7-day columns never collapse or overlap.
+   - **Events & Exams Console (`HolidaysView.jsx`)**: Filter pills horizontally scrollable; data table wrapped in a smooth horizontal scroll container.
+4. **Universal Responsive Tables & Modals**:
+   - All data tables across HRMS modules wrapped in `.table-responsive` with touch-scrolling.
+   - Modals auto-scale to `96%` viewport width with touch-friendly input sizes (16px to prevent iOS auto-zoom).
+

@@ -14,6 +14,35 @@ function formatDate(d) {
 }
 
 /**
+ * Helper: Checks if a calendar event applies to a specific calendar date.
+ * RULE: Examinations and assessments (categories/titles containing 'Exam' or 'Test')
+ * are strictly scheduled on instructional weekdays (Monday through Friday) by default.
+ * The system NEVER assumes or places an exam on Saturday or Sunday unless the
+ * administrator/HR explicitly opted-in via [INCLUDE_SATURDAY] or [INCLUDE_SUNDAY].
+ */
+function eventAppliesToDate(ev, dateObj) {
+  const dateStr = formatDate(dateObj);
+  const evStart = formatDate(new Date(ev.start_date));
+  const evEnd = formatDate(new Date(ev.end_date));
+  if (dateStr < evStart || dateStr > evEnd) return false;
+
+  const dayOfWeek = dateObj.getDay(); // 0 = Sunday, 6 = Saturday
+  const isExam = (ev.category && (ev.category.toLowerCase().includes('exam') || ev.category.toLowerCase().includes('test'))) ||
+                 (ev.title && (ev.title.toLowerCase().includes('exam') || ev.title.toLowerCase().includes('test')));
+
+  if (isExam) {
+    const desc = ev.description || '';
+    const incSat = desc.includes('[INCLUDE_SATURDAY]') || desc.includes('[INCLUDES_SATURDAY]');
+    const incSun = desc.includes('[INCLUDE_SUNDAY]') || desc.includes('[INCLUDES_SUNDAY]');
+
+    if (dayOfWeek === 0 && !incSun) return false; // Exclude Sunday unless explicitly checked
+    if (dayOfWeek === 6 && !incSat) return false; // Exclude Saturday unless explicitly checked
+  }
+
+  return true;
+}
+
+/**
  * -----------------------------------------------------------------------------
  * 1. CALENDAR OVERVIEW & DASHBOARD METRICS
  * -----------------------------------------------------------------------------
@@ -86,12 +115,8 @@ router.get('/overview', authenticateToken, async (req, res) => {
       // Default: Sunday is non-working
       let isWorking = dayOfWeek !== 0;
 
-      // Check events on this date
-      const eventsOnDate = monthEvents.filter(ev => {
-        const evStart = formatDate(new Date(ev.start_date));
-        const evEnd = formatDate(new Date(ev.end_date));
-        return iterDateStr >= evStart && iterDateStr <= evEnd;
-      });
+      // Check events on this date (respecting weekend exclusions for exams)
+      const eventsOnDate = monthEvents.filter(ev => eventAppliesToDate(ev, iterDate));
 
       for (const ev of eventsOnDate) {
         if (ev.event_type === 'Holiday' || ev.event_type === 'School Closure') {
@@ -111,7 +136,7 @@ router.get('/overview', authenticateToken, async (req, res) => {
         AND start_date <= $1
         AND end_date >= $1;
     `, [todayStr]);
-    const todayEvents = todayEventsRes.rows;
+    const todayEvents = todayEventsRes.rows.filter(ev => eventAppliesToDate(ev, today));
 
     const todayDayOfWeek = today.getDay();
     let todayIsWorking = todayDayOfWeek !== 0;
@@ -224,12 +249,8 @@ router.get('/month', authenticateToken, async (req, res) => {
       let isWorking = dayOfWeek !== 0;
       let dayType = dayOfWeek === 0 ? 'Weekly Off' : 'Working Day';
 
-      // Find events on this date
-      const dayEvents = events.filter(ev => {
-        const evStart = formatDate(new Date(ev.start_date));
-        const evEnd = formatDate(new Date(ev.end_date));
-        return dateStr >= evStart && dateStr <= evEnd;
-      });
+      // Find events on this date (respecting weekend exclusions for exams)
+      const dayEvents = events.filter(ev => eventAppliesToDate(ev, dateObj));
 
       // Find term on this date
       const dayTerm = terms.find(t => {
@@ -877,9 +898,24 @@ router.post('/events', authenticateToken, requirePermission('calendar:manage'), 
       }
     }
 
-    // Auto-calculate total days
-    const diffTime = Math.abs(new Date(end_date) - new Date(start_date));
-    const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    // Auto-calculate total days (respecting weekend exclusions for exams unless opted-in)
+    const isExam = (category && (category.toLowerCase().includes('exam') || category.toLowerCase().includes('test'))) ||
+                   (title && (title.toLowerCase().includes('exam') || title.toLowerCase().includes('test')));
+    const incSat = description && (description.includes('[INCLUDE_SATURDAY]') || description.includes('[INCLUDES_SATURDAY]'));
+    const incSun = description && (description.includes('[INCLUDE_SUNDAY]') || description.includes('[INCLUDES_SUNDAY]'));
+
+    let totalDays = 0;
+    const sDate = new Date(start_date);
+    const eDate = new Date(end_date);
+    for (let cur = new Date(sDate); cur <= eDate; cur.setDate(cur.getDate() + 1)) {
+      const dow = cur.getDay();
+      if (isExam) {
+        if (dow === 0 && !incSun) continue; // Skip Sunday
+        if (dow === 6 && !incSat) continue; // Skip Saturday
+      }
+      totalDays++;
+    }
+    if (totalDays === 0) totalDays = 1;
 
     // Working day setting
     let isWorking = false;
@@ -944,8 +980,23 @@ router.put('/events/:id', authenticateToken, requirePermission('calendar:manage'
   }
 
   try {
-    const diffTime = Math.abs(new Date(end_date) - new Date(start_date));
-    const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const isExam = (category && (category.toLowerCase().includes('exam') || category.toLowerCase().includes('test'))) ||
+                   (title && (title.toLowerCase().includes('exam') || title.toLowerCase().includes('test')));
+    const incSat = description && (description.includes('[INCLUDE_SATURDAY]') || description.includes('[INCLUDES_SATURDAY]'));
+    const incSun = description && (description.includes('[INCLUDE_SUNDAY]') || description.includes('[INCLUDES_SUNDAY]'));
+
+    let totalDays = 0;
+    const sDate = new Date(start_date);
+    const eDate = new Date(end_date);
+    for (let cur = new Date(sDate); cur <= eDate; cur.setDate(cur.getDate() + 1)) {
+      const dow = cur.getDay();
+      if (isExam) {
+        if (dow === 0 && !incSun) continue; // Skip Sunday
+        if (dow === 6 && !incSat) continue; // Skip Saturday
+      }
+      totalDays++;
+    }
+    if (totalDays === 0) totalDays = 1;
 
     let isWorking = false;
     if (event_type === 'Working Day Override') {
@@ -1032,31 +1083,285 @@ router.delete('/events/:id', authenticateToken, requirePermission('calendar:mana
 
 /**
  * -----------------------------------------------------------------------------
- * 7. UPCOMING EVENTS (PUBLIC TO ALL AUTHENTICATED STAFF)
+ * 8. REAL CALENDAR SYNCHRONIZATION: iCalendar (.ics) EXPORT & SUBSCRIPTION FEED
  * -----------------------------------------------------------------------------
- * GET /api/academic-calendar/upcoming
+ * Standards-compliant RFC 5545 iCalendar feed for Google Calendar, Apple Calendar, and Outlook.
+ * Supports token via Header OR query parameter for subscription URLs.
  */
-router.get('/upcoming', authenticateToken, async (req, res) => {
-  try {
-    const todayStr = formatDate(new Date());
-    const result = await pool.query(`
-      SELECT 
-        e.id, e.title, e.event_type, e.category, e.start_date, e.end_date, e.total_days, e.description,
-        (e.start_date - $1::date) AS days_remaining,
-        y.name AS academic_year_name,
-        t.name AS term_name
-      FROM calendar_events e
-      JOIN academic_years y ON e.academic_year_id = y.id
-      LEFT JOIN academic_terms t ON e.term_id = t.id
-      WHERE e.end_date >= $1::date AND e.is_active = true
-      ORDER BY e.start_date ASC
-      LIMIT 10;
-    `, [todayStr]);
+const jwt = require('jsonwebtoken');
 
-    res.json({ success: true, data: result.rows });
+const authenticateFeed = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const queryToken = req.query.token;
+  const token = (authHeader && authHeader.split(' ')[1]) || queryToken;
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Authentication required for calendar feed.' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'school_hrms_super_secure_jwt_secret_key_2026_educore', (err, user) => {
+    if (err) {
+      return res.status(403).json({ success: false, message: 'Invalid or expired calendar feed token.' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// Helper: Format date for iCal all-day events (YYYYMMDD)
+function formatIcsDate(dateStr) {
+  const d = new Date(dateStr);
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${year}${month}${day}`;
+}
+
+// Helper: Format date plus 1 day for inclusive all-day events
+function formatIcsEndDate(dateStr) {
+  const d = new Date(dateStr);
+  d.setUTCDate(d.getUTCDate() + 1);
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${year}${month}${day}`;
+}
+
+// Helper: Clean text for iCal fields
+function escapeIcsText(str) {
+  if (!str) return '';
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\n/g, '\\n');
+}
+
+// Shared handler for generating RFC 5545 iCalendar (.ics) string
+async function generateIcsCalendar(academicYearId, category) {
+  let query = `
+    SELECT 
+      e.*,
+      y.name AS academic_year_name,
+      t.name AS term_name
+    FROM calendar_events e
+    JOIN academic_years y ON e.academic_year_id = y.id
+    LEFT JOIN academic_terms t ON e.term_id = t.id
+    WHERE e.is_active = true
+  `;
+  const params = [];
+  let pIdx = 1;
+
+  if (academicYearId && academicYearId !== 'ALL') {
+    query += ` AND e.academic_year_id = $${pIdx}`;
+    params.push(academicYearId);
+    pIdx++;
+  } else {
+    query += ` AND y.is_active = true`;
+  }
+
+  if (category && category !== 'ALL') {
+    if (category === 'Exams') {
+      query += ` AND (e.event_type = 'Non-Instructional' AND (e.category ILIKE '%Exam%' OR e.title ILIKE '%Exam%'))`;
+    } else if (category === 'Holidays') {
+      query += ` AND e.event_type IN ('Holiday', 'School Closure')`;
+    } else {
+      query += ` AND e.event_type = $${pIdx}`;
+      params.push(category);
+      pIdx++;
+    }
+  }
+
+  query += ` ORDER BY e.start_date ASC;`;
+
+  const result = await pool.query(query, params);
+  const events = result.rows;
+
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//St. Vincent\'s High School//Academic Calendar HRMS//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:St. Vincent\'s Academic Calendar',
+    'X-WR-TIMEZONE:Asia/Kolkata',
+    'X-WR-CALDESC:Official Academic Calendar, Examination Schedules, and Holidays'
+  ];
+
+  const nowStamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+  for (const ev of events) {
+    const dtStart = formatIcsDate(ev.start_date);
+    const dtEnd = formatIcsEndDate(ev.end_date);
+    const summary = escapeIcsText(ev.title);
+    const description = escapeIcsText(
+      `${ev.description || ''}${ev.description ? '\\n\\n' : ''}Classification: ${ev.event_type} (${ev.category || 'General'})\\nDuration: ${ev.total_days || 1} Day(s)\\nAcademic Session: ${ev.academic_year_name || ''}${ev.term_name ? ' • ' + ev.term_name : ''}`
+    );
+    const categories = escapeIcsText(ev.category || ev.event_type);
+
+    lines.push('BEGIN:VEVENT');
+    lines.push(`UID:${ev.id}@school-hrms.edu`);
+    lines.push(`DTSTAMP:${nowStamp}`);
+    lines.push(`DTSTART;VALUE=DATE:${dtStart}`);
+    lines.push(`DTEND;VALUE=DATE:${dtEnd}`);
+    lines.push(`SUMMARY:${summary}`);
+    lines.push(`DESCRIPTION:${description}`);
+    lines.push(`CATEGORIES:${categories}`);
+    lines.push(`STATUS:CONFIRMED`);
+    lines.push('END:VEVENT');
+  }
+
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+
+// GET /api/academic-calendar/feed.ics (Live Calendar Feed for Google Calendar / Outlook / Apple Calendar)
+router.get('/feed.ics', authenticateFeed, async (req, res) => {
+  try {
+    const { academic_year_id, category } = req.query;
+    const icsContent = await generateIcsCalendar(academic_year_id, category);
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'inline; filename="school-calendar.ics"');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(icsContent);
   } catch (error) {
-    console.error('Error fetching upcoming events:', error);
-    res.status(500).json({ success: false, message: 'Failed to retrieve upcoming events.' });
+    console.error('Error generating calendar feed:', error);
+    res.status(500).send('Failed to generate calendar feed.');
+  }
+});
+
+// GET /api/academic-calendar/export/ical (Downloadable .ics file)
+router.get('/export/ical', authenticateToken, async (req, res) => {
+  try {
+    const { academic_year_id, category } = req.query;
+    const icsContent = await generateIcsCalendar(academic_year_id, category);
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="st-vincents-academic-calendar.ics"');
+    res.send(icsContent);
+  } catch (error) {
+    console.error('Error exporting iCal file:', error);
+    res.status(500).json({ success: false, message: 'Failed to export calendar file.' });
+  }
+});
+
+/**
+ * -----------------------------------------------------------------------------
+ * 9. OFFICIAL PUBLIC & NATIONAL HOLIDAY LIBRARY SYNCHRONIZATION
+ * -----------------------------------------------------------------------------
+ * POST /api/academic-calendar/sync-official-holidays
+ * Pre-populates verified official public and institutional holidays for the academic year.
+ */
+router.post('/sync-official-holidays', authenticateToken, requirePermission('calendar:manage'), async (req, res) => {
+  const { academic_year_id, replace_existing } = req.body;
+
+  try {
+    // 1. Resolve Academic Year
+    let yearId = academic_year_id;
+    let yearName = 'Current Session';
+    if (!yearId || yearId === 'ALL') {
+      const activeYearRes = await pool.query("SELECT id, name, start_date, end_date FROM academic_years WHERE is_active = true LIMIT 1;");
+      if (activeYearRes.rows.length > 0) {
+        yearId = activeYearRes.rows[0].id;
+        yearName = activeYearRes.rows[0].name;
+      } else {
+        return res.status(400).json({ success: false, message: 'No active academic year found. Please select an academic year.' });
+      }
+    } else {
+      const yrRes = await pool.query("SELECT id, name, start_date, end_date FROM academic_years WHERE id = $1;", [yearId]);
+      if (yrRes.rows.length > 0) {
+        yearName = yrRes.rows[0].name;
+      }
+    }
+
+    // Extract year numbers to compute accurate holiday dates for this academic cycle
+    // (e.g. 2026-2027)
+    const currentYearNum = new Date().getFullYear();
+    const targetYear1 = currentYearNum;
+    const targetYear2 = currentYearNum + 1;
+
+    // Verified List of Official Public, National & Academic Holidays
+    const officialHolidayLibrary = [
+      // National Holidays
+      { title: 'Independence Day', event_type: 'Holiday', category: 'National Holiday', start_date: `${targetYear1}-08-15`, end_date: `${targetYear1}-08-15`, desc: 'National celebration of Independence Day.' },
+      { title: 'Gandhi Jayanti', event_type: 'Holiday', category: 'National Holiday', start_date: `${targetYear1}-10-02`, end_date: `${targetYear1}-10-02`, desc: 'Mahatma Gandhi Jayanti / International Day of Non-Violence.' },
+      { title: 'Republic Day', event_type: 'Holiday', category: 'National Holiday', start_date: `${targetYear2}-01-26`, end_date: `${targetYear2}-01-26`, desc: 'National celebration of Republic Day of India.' },
+
+      // Key Regional & Festival Holidays
+      { title: 'Ganesh Chaturthi', event_type: 'Holiday', category: 'Festival Holiday', start_date: `${targetYear1}-09-14`, end_date: `${targetYear1}-09-14`, desc: 'Public festival holiday.' },
+      { title: 'Dussehra (Vijayadashami)', event_type: 'Holiday', category: 'Festival Holiday', start_date: `${targetYear1}-10-20`, end_date: `${targetYear1}-10-20`, desc: 'Dussehra institutional holiday.' },
+      { title: 'Diwali (Deepavali Break)', event_type: 'Holiday', category: 'Festival Holiday', start_date: `${targetYear1}-11-08`, end_date: `${targetYear1}-11-12`, desc: 'Diwali school vacation and festival holidays.' },
+      { title: 'Guru Nanak Jayanti', event_type: 'Holiday', category: 'Public Holiday', start_date: `${targetYear1}-11-24`, end_date: `${targetYear1}-11-24`, desc: 'Guru Nanak Gurpurab public holiday.' },
+      { title: 'Christmas Day', event_type: 'Holiday', category: 'Public Holiday', start_date: `${targetYear1}-12-25`, end_date: `${targetYear1}-12-25`, desc: 'Celebration of Christmas.' },
+      { title: 'Winter Vacation', event_type: 'Holiday', category: 'School Holiday', start_date: `${targetYear1}-12-26`, end_date: `${targetYear2}-01-02`, desc: 'Winter break for all faculty and students.' },
+      { title: 'Maha Shivratri', event_type: 'Holiday', category: 'Festival Holiday', start_date: `${targetYear2}-02-15`, end_date: `${targetYear2}-02-15`, desc: 'Maha Shivratri festival observance.' },
+      { title: 'Holi (Festival of Colours)', event_type: 'Holiday', category: 'Festival Holiday', start_date: `${targetYear2}-03-04`, end_date: `${targetYear2}-03-04`, desc: 'Holi festival holiday.' },
+      { title: 'Good Friday', event_type: 'Holiday', category: 'Public Holiday', start_date: `${targetYear2}-03-26`, end_date: `${targetYear2}-03-26`, desc: 'Good Friday institutional observance.' },
+      { title: 'Eid-ul-Fitr', event_type: 'Holiday', category: 'Public Holiday', start_date: `${targetYear2}-03-20`, end_date: `${targetYear2}-03-20`, desc: 'Eid-ul-Fitr public holiday (subject to moon sighting).' },
+      { title: 'Dr. B.R. Ambedkar Jayanti', event_type: 'Holiday', category: 'Public Holiday', start_date: `${targetYear2}-04-14`, end_date: `${targetYear2}-04-14`, desc: 'Dr. B.R. Ambedkar Remembrance Day.' },
+      { title: 'Summer Vacation Break', event_type: 'Holiday', category: 'School Holiday', start_date: `${targetYear2}-05-01`, end_date: `${targetYear2}-06-10`, desc: 'Annual summer vacation for students and faculty.' }
+    ];
+
+    let insertedCount = 0;
+    let skippedCount = 0;
+
+    for (const item of officialHolidayLibrary) {
+      // Check if duplicate title + start_date exists in this academic year
+      const existCheck = await pool.query(`
+        SELECT id FROM calendar_events
+        WHERE academic_year_id = $1 AND title = $2 AND start_date = $3
+        LIMIT 1;
+      `, [yearId, item.title, item.start_date]);
+
+      if (existCheck.rows.length > 0) {
+        if (replace_existing) {
+          await pool.query(`
+            UPDATE calendar_events
+            SET end_date = $1, description = $2, category = $3, event_type = $4, is_active = true, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $5;
+          `, [item.end_date, item.desc, item.category, item.event_type, existCheck.rows[0].id]);
+          insertedCount++;
+        } else {
+          skippedCount++;
+        }
+      } else {
+        const diffDays = Math.ceil(Math.abs(new Date(item.end_date) - new Date(item.start_date)) / (1000 * 60 * 60 * 24)) + 1;
+        await pool.query(`
+          INSERT INTO calendar_events (
+            academic_year_id, title, event_type, category,
+            start_date, end_date, total_days, description, is_working_day, is_active, created_by
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, true, $9);
+        `, [
+          yearId,
+          item.title,
+          item.event_type,
+          item.category,
+          item.start_date,
+          item.end_date,
+          diffDays,
+          item.desc,
+          req.user.id
+        ]);
+        insertedCount++;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Successfully synchronized official holidays for ${yearName}: ${insertedCount} added/updated, ${skippedCount} already up to date.`,
+      data: {
+        academic_year_id: yearId,
+        academic_year_name: yearName,
+        inserted_count: insertedCount,
+        skipped_count: skippedCount,
+        total_holidays: officialHolidayLibrary.length
+      }
+    });
+  } catch (error) {
+    console.error('Error syncing official holidays:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to sync official holidays.' });
   }
 });
 

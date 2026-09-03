@@ -810,6 +810,105 @@ export const hrmsApi = {
 
   async getUpcomingCalendarEvents() {
     return request('/academic-calendar/upcoming');
+  },
+
+  async syncOfficialHolidays(payload = {}) {
+    return request('/academic-calendar/sync-official-holidays', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  getCalendarFeedUrl(academicYearId = 'ALL', category = 'ALL') {
+    const token = localStorage.getItem('token') || '';
+    const base = API_BASE_URL.replace(/\/$/, '');
+    return `${base}/academic-calendar/feed.ics?token=${encodeURIComponent(token)}&academic_year_id=${academicYearId}&category=${category}`;
+  },
+
+  getCalendarExportUrl(academicYearId = 'ALL', category = 'ALL') {
+    const token = localStorage.getItem('token') || '';
+    const base = API_BASE_URL.replace(/\/$/, '');
+    return `${base}/academic-calendar/feed.ics?token=${encodeURIComponent(token)}&academic_year_id=${academicYearId}&category=${category}`;
+  },
+
+  // =========================================================================
+  // PAYROLL MANAGEMENT APIS
+  // =========================================================================
+
+  async getPayrollOverview(month, year) {
+    const query = new URLSearchParams();
+    if (month) query.append('month', month);
+    if (year) query.append('year', year);
+    return request(`/payroll/overview?${query.toString()}`);
+  },
+
+  async getPayrollRecords(params = {}) {
+    const query = new URLSearchParams();
+    if (params.month) query.append('month', params.month);
+    if (params.year) query.append('year', params.year);
+    if (params.department_id) query.append('department_id', params.department_id);
+    if (params.status) query.append('status', params.status);
+    if (params.search) query.append('search', params.search);
+    return request(`/payroll/records?${query.toString()}`);
+  },
+
+  async getPayrollRecordDetail(id) {
+    return request(`/payroll/records/${id}`);
+  },
+
+  async processMonthlyPayroll(payload) {
+    return request('/payroll/process', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async updatePayrollRecordStatus(id, status, remarks = '') {
+    return request(`/payroll/records/${id}/status`, {
+      method: 'POST',
+      body: JSON.stringify({ status, remarks })
+    });
+  },
+
+  async batchUpdatePayrollStatus(month, year, status) {
+    return request('/payroll/batch-status', {
+      method: 'POST',
+      body: JSON.stringify({ month, year, status })
+    });
+  },
+
+  async getSalaryComponents() {
+    return request('/payroll/components');
+  },
+
+  async saveSalaryComponent(payload) {
+    return request('/payroll/components', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getSalaryStructures() {
+    return request('/payroll/structures');
+  },
+
+  async getEmployeeSalaryAssignments() {
+    return request('/payroll/assignments');
+  },
+
+  async assignEmployeeSalary(payload) {
+    return request('/payroll/assignments', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getPayslip(recordId) {
+    return request(`/payroll/payslip/${recordId}`);
+  },
+
+  async getMyPayslips() {
+    return request('/payroll/my-payslips');
   }
 };
 

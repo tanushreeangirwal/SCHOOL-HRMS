@@ -169,13 +169,14 @@ export function EmployeeDashboardView({
       <div 
         className="employee-welcome-banner" 
         style={{
-          backgroundColor: '#0f172a',
-          border: '1px solid #1e293b',
-          borderRadius: 'var(--radius-lg, 12px)',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderLeft: '4px solid #3155D9',
+          borderRadius: '12px',
           padding: '22px 26px',
-          color: '#ffffff',
+          color: '#172033',
           marginBottom: '24px',
-          boxShadow: 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08))',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -192,28 +193,28 @@ export function EmployeeDashboardView({
           />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', backgroundColor: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '4px' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', backgroundColor: '#eef2ff', color: '#3155D9', border: '1px solid #dbeafe', padding: '3px 9px', borderRadius: '5px' }}>
                 St. Vincent's High School
               </span>
-              <span className="code-badge" style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: '#ffffff' }}>
+              <span className="code-badge">
                 {employee.employee_code}
               </span>
             </div>
-            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, margin: '0 0 2px 0', color: '#ffffff', letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 2px 0', color: '#172033', letterSpacing: '-0.02em' }}>
               {greeting}, {employee.first_name}!
             </h1>
-            <p style={{ fontSize: '0.85rem', color: '#bfdbfe', margin: 0 }}>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
               {employee.designation_name} • {employee.department_name}
             </p>
           </div>
         </div>
 
         {/* Live Date & Clock Widget */}
-        <div style={{ textAlign: 'right', backgroundColor: 'rgba(0,0,0,0.15)', padding: '10px 18px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#ffffff', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.04em' }}>
+        <div style={{ textAlign: 'right', backgroundColor: '#f8fafc', padding: '10px 18px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#172033', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em' }}>
             {formattedLiveClock}
           </div>
-          <div style={{ fontSize: '0.78rem', color: '#bfdbfe', marginTop: '2px' }}>
+          <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px', fontWeight: 500 }}>
             {formattedCurrentDate}
           </div>
         </div>
@@ -322,7 +323,7 @@ export function EmployeeDashboardView({
                     fontWeight: 800,
                     borderRadius: '8px',
                     letterSpacing: '0.04em',
-                    boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)',
+                    boxShadow: '0 4px 14px 0 rgba(49, 85, 217, 0.3)',
                     margin: '0 auto',
                     display: 'flex',
                     alignItems: 'center',
@@ -378,11 +379,11 @@ export function EmployeeDashboardView({
                     fontSize: '1.05rem',
                     fontWeight: 800,
                     borderRadius: '8px',
-                    backgroundColor: '#1e40af',
+                    backgroundColor: '#172033',
                     color: '#ffffff',
                     border: 'none',
                     letterSpacing: '0.04em',
-                    boxShadow: '0 4px 14px 0 rgba(30, 64, 175, 0.3)',
+                    boxShadow: '0 4px 14px 0 rgba(23, 32, 51, 0.25)',
                     margin: '0 auto',
                     display: 'flex',
                     alignItems: 'center',
@@ -408,7 +409,7 @@ export function EmployeeDashboardView({
               <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '18px 16px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#dcfce7', color: '#166534', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700, marginBottom: '12px' }}>
                   <Check size={14} />
-                  <span>Attendance Completed</span>
+                  <span>Attendance Completed for Today</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '6px' }}>
@@ -424,6 +425,17 @@ export function EmployeeDashboardView({
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Working Hours</span>
                     <strong style={{ fontSize: '0.92rem', color: '#166534' }}>{attendance?.working_hours}</strong>
                   </div>
+                </div>
+
+                <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs"
+                    onClick={onNavigateToAttendanceHistory}
+                    style={{ color: '#3155D9', fontWeight: 600 }}
+                  >
+                    View Complete Attendance Log →
+                  </button>
                 </div>
               </div>
             ) : (

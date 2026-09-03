@@ -102,6 +102,28 @@ export function MyAttendanceView({
 
   return (
     <div className="attendance-view-content" style={{ width: '100%', boxSizing: 'border-box' }}>
+      {/* Sub-Navigation Tabs */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+        {onNavigateToMarkAttendance && (
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={onNavigateToMarkAttendance}
+          >
+            <Clock size={15} />
+            <span>Mark Attendance</span>
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          style={{ cursor: 'default' }}
+        >
+          <Calendar size={15} />
+          <span>Attendance History</span>
+        </button>
+      </div>
+
       {/* 1. Page Header & Month Selector */}
       <div className="page-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>

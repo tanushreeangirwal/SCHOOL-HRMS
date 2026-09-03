@@ -11,6 +11,7 @@ const shiftRoutes = require("./routes/shifts");
 const attendanceRoutes = require("./routes/attendance");
 const leaveRoutes = require("./routes/leaves");
 const calendarRoutes = require("./routes/academicCalendar");
+const payrollRoutes = require("./routes/payroll");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -96,6 +97,9 @@ app.use("/api/leaves", leaveRoutes);
 
 // Academic Calendar routes
 app.use("/api/academic-calendar", calendarRoutes);
+
+// Payroll routes
+app.use("/api/payroll", payrollRoutes);
 
 // Employee routes
 app.use("/api/employees", employeeRoutes);

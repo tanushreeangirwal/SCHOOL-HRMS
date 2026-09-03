@@ -15,7 +15,8 @@ import {
   Clock,
   UserCheck,
   Check,
-  Loader2
+  Loader2,
+  Menu
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { hrmsApi } from '../../services/api';
@@ -27,10 +28,12 @@ export function Header({
   attendanceSubTab,
   leaveSubTab,
   calendarSubTab,
+  payrollSubTab,
   selectedEmployeeName,
   selectedDepartmentName,
   selectedDesignationName,
   selectedShiftName,
+  onToggleMobileMenu,
   onAddEmployee, 
   onAddDepartment,
   onAddDesignation,
@@ -303,6 +306,34 @@ export function Header({
           breadcrumbs: ["St. Vincent's High School", 'Academic Calendar', 'Overview']
         };
 
+      case 'payroll':
+        if (payrollSubTab === 'records') {
+          return {
+            title: 'Employee Payroll Register',
+            subtitle: 'Monthly compensation ledgers, attendance proration, and payable net salary audit.',
+            breadcrumbs: ["St. Vincent's High School", 'Payroll Management', 'Employee Register']
+          };
+        }
+        if (payrollSubTab === 'structures') {
+          return {
+            title: 'Salary Structures & Components',
+            subtitle: 'Institutional salary templates, basic, allowances, PF, professional tax, and deduction rules.',
+            breadcrumbs: ["St. Vincent's High School", 'Payroll Management', 'Salary Structures']
+          };
+        }
+        return {
+          title: 'Payroll Management Console',
+          subtitle: 'Monthly payroll computation, gross earnings, statutory deductions, and payout approval.',
+          breadcrumbs: ["St. Vincent's High School", 'Payroll Management', 'Dashboard']
+        };
+
+      case 'my-payslips':
+        return {
+          title: 'My Salary Slips',
+          subtitle: `Personal compensation statements, earnings, deductions, and payslip downloads for ${user?.full_name || 'Staff Member'}`,
+          breadcrumbs: ["St. Vincent's High School", 'My Payslips']
+        };
+
       default:
         return {
           title: "St. Vincent's High School",
@@ -317,8 +348,19 @@ export function Header({
   return (
     <header className="top-header">
       <div className="header-left">
-        {/* Breadcrumb Bar */}
-        <nav className="header-breadcrumbs" aria-label="Breadcrumb">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            className="mobile-menu-toggle-btn"
+            onClick={onToggleMobileMenu}
+            aria-label="Open Navigation Menu"
+            title="Open Menu"
+          >
+            <Menu size={20} />
+          </button>
+
+          {/* Breadcrumb Bar */}
+          <nav className="header-breadcrumbs" aria-label="Breadcrumb">
           <div className="breadcrumb-brand-badge">
             <span className="breadcrumb-brand-dot"></span>
             <span className="breadcrumb-brand-text">St. Vincent's High School</span>
@@ -333,6 +375,7 @@ export function Header({
             </React.Fragment>
           ))}
         </nav>
+        </div>
 
         {/* Page Title & Subtitle */}
         <div className="header-title-container">

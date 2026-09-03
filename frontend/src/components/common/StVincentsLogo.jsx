@@ -184,7 +184,7 @@ export function StVincentsLogo({
     );
   }
 
-  const primaryTextColor = theme === 'dark' ? '#ffffff' : '#0f172a';
+  const primaryTextColor = theme === 'dark' ? '#ffffff' : '#172033';
   const secondaryTextColor = theme === 'dark' ? '#94a3b8' : '#64748b';
 
   return (

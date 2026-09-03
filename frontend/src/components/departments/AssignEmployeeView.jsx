@@ -796,32 +796,60 @@ export function AssignEmployeeView({
       </div>
 
       {/* 4. SCHOOL-WIDE DEPARTMENT ASSIGNMENT AUDIT LOG TABLE */}
-      <div className="table-wrapper-card assign-audit-card" style={{ marginTop: '32px' }}>
-        <div className="table-controls-bar">
-          <div className="filters-left">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <History size={18} className="text-primary" />
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
+      <div 
+        className="table-wrapper-card" 
+        style={{ 
+          marginTop: '36px', 
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '12px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+          overflow: 'hidden'
+        }}
+      >
+        <div 
+          style={{ 
+            padding: '18px 22px', 
+            borderBottom: '1px solid #e2e8f0', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            flexWrap: 'wrap', 
+            gap: '14px',
+            backgroundColor: '#ffffff'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '34px', height: '34px', borderRadius: '8px', backgroundColor: '#eef2ff', color: '#3155D9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <History size={18} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#172033', letterSpacing: '-0.01em' }}>
                 Department Assignment & Transfer Audit Trail
               </h3>
+              <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 0' }}>
+                Chronological record of faculty appointments and departmental reassignments.
+              </p>
             </div>
           </div>
 
-          <div className="filters-right">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             {/* Tab switch: All transfers vs Selected Employee only */}
             {selectedEmployee && (
-              <div className="filter-pill-group">
+              <div style={{ display: 'flex', gap: '4px', backgroundColor: '#f1f5f9', padding: '3px', borderRadius: '8px' }}>
                 <button
                   type="button"
-                  className={`filter-pill ${activeHistoryTab === 'all' ? 'active' : ''}`}
+                  className={`btn btn-xs ${activeHistoryTab === 'all' ? 'btn-primary' : 'btn-ghost'}`}
                   onClick={() => setActiveHistoryTab('all')}
+                  style={{ fontSize: '0.75rem', padding: '4px 10px' }}
                 >
-                  All School Transfers
+                  All Staff Transfers
                 </button>
                 <button
                   type="button"
-                  className={`filter-pill ${activeHistoryTab === 'selected' ? 'active' : ''}`}
+                  className={`btn btn-xs ${activeHistoryTab === 'selected' ? 'btn-primary' : 'btn-ghost'}`}
                   onClick={() => setActiveHistoryTab('selected')}
+                  style={{ fontSize: '0.75rem', padding: '4px 10px' }}
                 >
                   {selectedEmployee.first_name}'s History ({selectedEmployeeHistory.length})
                 </button>
@@ -829,11 +857,12 @@ export function AssignEmployeeView({
             )}
 
             {/* Search audit log */}
-            <div className="search-input-wrapper">
+            <div className="search-input-wrapper" style={{ minWidth: '220px', maxWidth: '280px' }}>
               <Search className="search-icon" size={14} />
               <input
                 type="text"
-                className="search-input search-input-sm"
+                className="search-input"
+                style={{ padding: '7px 32px 7px 34px', fontSize: '0.82rem' }}
                 placeholder="Search audit trail..."
                 value={historySearchTerm}
                 onChange={(e) => setHistorySearchTerm(e.target.value)}
@@ -851,10 +880,11 @@ export function AssignEmployeeView({
 
             <button
               type="button"
-              className="btn btn-secondary btn-icon btn-sm"
+              className="btn btn-secondary btn-sm"
               onClick={fetchHistory}
               disabled={isHistoryLoading}
               title="Refresh audit history"
+              style={{ padding: '7px 10px' }}
             >
               <RefreshCw size={14} className={isHistoryLoading ? 'spin-animation' : ''} />
             </button>
@@ -862,77 +892,76 @@ export function AssignEmployeeView({
         </div>
 
         {isHistoryLoading ? (
-          <div style={{ padding: '36px', textAlign: 'center' }}>
-            <Loader2 size={26} className="spin-animation text-primary" style={{ margin: '0 auto' }} />
-            <p style={{ marginTop: '8px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Loading transfer logs from database...</p>
+          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+            <Loader2 size={28} className="spin-animation" style={{ color: '#3155D9', margin: '0 auto 10px' }} />
+            <p style={{ margin: 0, fontSize: '0.85rem' }}>Loading assignment audit logs...</p>
           </div>
         ) : filteredHistory.length === 0 ? (
-          <div className="empty-state-container" style={{ padding: '36px' }}>
-            <Clock size={32} className="text-muted" style={{ marginBottom: '8px' }} />
-            <div style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-main)' }}>
+          <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+            <Clock size={36} style={{ color: '#94a3b8', margin: '0 auto 10px' }} />
+            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#172033' }}>
               No department assignment records found.
             </div>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+            <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px' }}>
               When faculty members are assigned or transferred between departments, historical audit records will appear here.
             </p>
           </div>
         ) : (
           <div className="table-responsive">
-            <table className="data-table">
+            <table className="employee-table">
               <thead>
                 <tr>
-                  <th style={{ width: '130px' }}>Staff Code</th>
-                  <th>Faculty Member</th>
-                  <th>New Assigned Department</th>
-                  <th>Previous Department</th>
+                  <th style={{ width: '120px' }}>Staff Code</th>
+                  <th style={{ minWidth: '160px' }}>Faculty Member</th>
+                  <th style={{ minWidth: '230px' }}>New Assigned Department</th>
+                  <th style={{ minWidth: '210px' }}>Previous Department</th>
                   <th style={{ width: '130px' }}>Effective Date</th>
-                  <th>Reason / Remarks</th>
+                  <th style={{ minWidth: '220px' }}>Reason / Remarks</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredHistory.map((item) => (
-                  <tr key={item.id}>
+                  <tr key={item.id} className="employee-table-row">
                     <td>
-                      <span className="table-code-badge text-monospace">
+                      <span className="code-badge">
                         {item.employee_code}
                       </span>
                     </td>
                     <td>
                       <div 
-                        className="clickable-cell"
                         onClick={() => onNavigateToEmployee && onNavigateToEmployee(item.employee_id)}
                         title="View employee profile"
-                        style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}
+                        style={{ cursor: 'pointer', fontWeight: 700, color: '#172033' }}
                       >
                         {item.employee_name}
                       </div>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Building2 size={14} className="text-primary" />
-                        <span style={{ fontWeight: 600, color: '#1e40af' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                        <Building2 size={15} style={{ color: '#3155D9', flexShrink: 0 }} />
+                        <span style={{ fontWeight: 600, color: '#3155D9' }}>
                           {item.department_name}
                         </span>
                       </div>
                     </td>
                     <td>
-                      <span className="text-muted" style={{ fontSize: '0.84rem' }}>
-                        {item.previous_department_name ? (
-                          item.previous_department_name
-                        ) : (
-                          <span className="italic" style={{ color: '#059669', fontSize: '0.78rem' }}>
-                            Initial Placement
-                          </span>
-                        )}
+                      {item.previous_department_name ? (
+                        <span style={{ color: '#475569', fontSize: '0.84rem' }}>
+                          {item.previous_department_name}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#059669', fontSize: '0.76rem', fontWeight: 600, backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: '4px' }}>
+                          Initial Placement
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 500 }}>
+                        {item.effective_date ? new Date(item.effective_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
                       </span>
                     </td>
                     <td>
-                      <span style={{ fontSize: '0.82rem', color: 'var(--text-main)' }}>
-                        {item.effective_date ? new Date(item.effective_date).toLocaleDateString() : '—'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="text-muted text-xs" title={item.reason}>
+                      <span style={{ fontSize: '0.82rem', color: '#64748b', lineHeight: 1.4 }} title={item.reason}>
                         {item.reason || '—'}
                       </span>
                     </td>

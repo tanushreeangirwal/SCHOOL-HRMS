@@ -50,7 +50,10 @@ export function AddEditEventModal({
         setTermId(event.term_id || '');
         setStartDate(event.start_date ? event.start_date.split('T')[0] : '');
         setEndDate(event.end_date ? event.end_date.split('T')[0] : '');
-        setDescription(event.description || '');
+        const rawDesc = event.description || '';
+        setIncludeSaturday(rawDesc.includes('[INCLUDE_SATURDAY]') || rawDesc.includes('[INCLUDES_SATURDAY]'));
+        setIncludeSunday(rawDesc.includes('[INCLUDE_SUNDAY]') || rawDesc.includes('[INCLUDES_SUNDAY]'));
+        setDescription(rawDesc.replace(/\[INCLUDE_SATURDAY\]|\[INCLUDES_SATURDAY\]|\[INCLUDE_SUNDAY\]|\[INCLUDES_SUNDAY\]/g, '').trim());
         setIsWorkingDay(Boolean(event.is_working_day));
       } else {
         setTitle('');
@@ -62,6 +65,8 @@ export function AddEditEventModal({
         setStartDate(todayStr);
         setEndDate(todayStr);
         setDescription('');
+        setIncludeSaturday(false);
+        setIncludeSunday(false);
         setIsWorkingDay(false);
       }
       setErrorMessage('');
@@ -69,21 +74,67 @@ export function AddEditEventModal({
     }
   }, [isOpen, event, activeYearId, academicYears]);
 
+  const [includeSaturday, setIncludeSaturday] = useState(false);
+  const [includeSunday, setIncludeSunday] = useState(false);
+
+  // Check whether this event represents an examination or assessment
+  const isExamCategory = useMemo(() => {
+    return (category && (category.toLowerCase().includes('exam') || category.toLowerCase().includes('test'))) ||
+           (title && (title.toLowerCase().includes('exam') || title.toLowerCase().includes('test')));
+  }, [category, title]);
+
   // Adjust category choices when eventType changes
   const categoryOptions = useMemo(() => {
     switch (eventType) {
       case 'Holiday':
-        return ['Public Holiday', 'Festival Holiday', 'School Holiday', 'National Holiday', 'Special Holiday'];
+        return [
+          'Public Holiday',
+          'Festival Holiday',
+          'National Holiday',
+          'School Vacation (Summer/Winter)',
+          'Local / Regional Holiday',
+          'Special Holiday'
+        ];
       case 'Non-Instructional':
-        return ['Staff Training', 'Exam Period', 'School Event', 'Parent-Teacher Meeting', 'Administrative Day'];
+        return [
+          'Exam Period / Term Tests',
+          'Mid-Term Examination',
+          'Final Annual Examination',
+          'Unit Test Assessment',
+          'Board Practical Exam',
+          'Staff Training & Workshop',
+          'School Event / Annual Day',
+          'Sports Day / Athletic Meet',
+          'Parent-Teacher Meeting (PTM)',
+          'Administrative Planning Day'
+        ];
       case 'School Closure':
-        return ['Weather Closure', 'Emergency Closure', 'Government Directive', 'Sanitation / Maintenance'];
+        return [
+          'Weather / Monsoon Closure',
+          'Emergency Closure',
+          'Government Directive',
+          'Sanitation / Maintenance'
+        ];
       case 'Working Day Override':
-        return ['Compensatory Working Day', 'Special Instruction Day', 'Weekend School Session'];
+        return [
+          'Compensatory Working Day',
+          'Special Instruction Day',
+          'Weekend School Session'
+        ];
       default:
         return ['General'];
     }
   }, [eventType]);
+
+  const handleApplyPreset = (type, defaultCat) => {
+    setEventType(type);
+    setCategory(defaultCat);
+    if (type === 'Working Day Override') {
+      setIsWorkingDay(true);
+    } else if (type === 'Holiday' || type === 'School Closure') {
+      setIsWorkingDay(false);
+    }
+  };
 
   // Filter terms by selected academic year
   const availableTerms = useMemo(() => {
@@ -91,15 +142,24 @@ export function AddEditEventModal({
     return terms.filter(t => t.academic_year_id === academicYearId);
   }, [terms, academicYearId]);
 
-  // Calculated duration
+  // Calculated duration (skipping Sat/Sun for examinations unless explicitly checked)
   const calculatedDays = useMemo(() => {
     if (!startDate || !endDate) return 0;
     const start = new Date(startDate);
     const end = new Date(endDate);
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
-    const diffTime = end.getTime() - start.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-  }, [startDate, endDate]);
+
+    let daysCount = 0;
+    for (let cur = new Date(start); cur <= end; cur.setDate(cur.getDate() + 1)) {
+      const dow = cur.getDay(); // 0 = Sun, 6 = Sat
+      if (isExamCategory) {
+        if (dow === 0 && !includeSunday) continue; // Skip Sunday by default
+        if (dow === 6 && !includeSaturday) continue; // Skip Saturday by default
+      }
+      daysCount++;
+    }
+    return daysCount;
+  }, [startDate, endDate, isExamCategory, includeSaturday, includeSunday]);
 
   if (!isOpen) return null;
 
@@ -125,6 +185,12 @@ export function AddEditEventModal({
 
     setIsSubmitting(true);
     try {
+      let finalDescription = (description || '').trim();
+      if (isExamCategory) {
+        if (includeSaturday) finalDescription += ' [INCLUDE_SATURDAY]';
+        if (includeSunday) finalDescription += ' [INCLUDE_SUNDAY]';
+      }
+
       const payload = {
         title: title.trim(),
         event_type: eventType,
@@ -133,7 +199,7 @@ export function AddEditEventModal({
         term_id: termId || null,
         start_date: startDate,
         end_date: endDate,
-        description: description ? description.trim() : null,
+        description: finalDescription ? finalDescription.trim() : null,
         is_working_day: eventType === 'Working Day Override' ? true : (eventType === 'Non-Instructional' ? isWorkingDay : false)
       };
 
@@ -200,6 +266,63 @@ export function AddEditEventModal({
           {/* 1. Basic Event Details */}
           <div className="apply-leave-section">
             <div className="apply-leave-section-label">Event Information</div>
+
+            {/* Quick Category Presets */}
+            <div style={{ marginBottom: '14px', backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>
+                Quick Category Presets
+              </span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                <button
+                  type="button"
+                  className={`btn btn-xs ${eventType === 'Holiday' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => handleApplyPreset('Holiday', 'Public Holiday')}
+                  style={{ fontSize: '0.76rem', padding: '4px 10px' }}
+                >
+                  🏖️ Public / School Holiday
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-xs ${category.includes('Exam') ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => handleApplyPreset('Non-Instructional', 'Mid-Term Examination')}
+                  style={{ fontSize: '0.76rem', padding: '4px 10px' }}
+                >
+                  📝 Exam / Assessment
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-xs ${category.includes('Sports') || category.includes('Annual') ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => handleApplyPreset('Non-Instructional', 'School Event / Annual Day')}
+                  style={{ fontSize: '0.76rem', padding: '4px 10px' }}
+                >
+                  🏆 School Event
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-xs ${category.includes('Training') ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => handleApplyPreset('Non-Instructional', 'Staff Training & Workshop')}
+                  style={{ fontSize: '0.76rem', padding: '4px 10px' }}
+                >
+                  👥 Staff Training
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-xs ${eventType === 'School Closure' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => handleApplyPreset('School Closure', 'Weather / Monsoon Closure')}
+                  style={{ fontSize: '0.76rem', padding: '4px 10px' }}
+                >
+                  ⚠️ School Closure
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-xs ${eventType === 'Working Day Override' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => handleApplyPreset('Working Day Override', 'Compensatory Working Day')}
+                  style={{ fontSize: '0.76rem', padding: '4px 10px' }}
+                >
+                  🔄 Working Override
+                </button>
+              </div>
+            </div>
 
             <div className="apply-leave-field">
               <label className="apply-leave-label" htmlFor="event-title">
@@ -315,11 +438,59 @@ export function AddEditEventModal({
                     <span>Duration</span>
                   </div>
                   <div className="duration-card-value">
-                    {calculatedDays > 0 ? `${calculatedDays} Day${calculatedDays > 1 ? 's' : ''}` : '0 Days'}
+                    {calculatedDays > 0 ? `${calculatedDays} ${isExamCategory ? 'Exam ' : ''}Day${calculatedDays > 1 ? 's' : ''}` : '0 Days'}
                   </div>
+                  {isExamCategory && (
+                    <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '3px', fontWeight: 600 }}>
+                      {includeSaturday && includeSunday ? 'All 7 Days' : (includeSaturday ? 'Mon–Sat (Excl. Sun)' : (includeSunday ? 'Mon–Fri + Sun' : 'Mon–Fri Only (No Weekends)'))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
+
+            {/* Weekend Scheduling Control for Examinations & Assessments */}
+            {isExamCategory && (
+              <div style={{
+                marginTop: '14px',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <Calendar size={14} style={{ color: '#3155D9' }} />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#172033' }}>
+                    Weekend Examination Scheduling (Saturday & Sunday Exclusions)
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '0 0 10px', lineHeight: 1.4 }}>
+                  By default, examinations and tests are strictly scheduled on instructional weekdays (Monday through Friday). The system will <strong>never</strong> place exams on Saturday or Sunday unless explicitly checked below.
+                </p>
+
+                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: '#334155' }}>
+                    <input
+                      type="checkbox"
+                      checked={includeSaturday}
+                      onChange={e => setIncludeSaturday(e.target.checked)}
+                      style={{ width: '16px', height: '16px', accentColor: '#3155D9' }}
+                    />
+                    <span>Schedule Exams on Saturday</span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: '#334155' }}>
+                    <input
+                      type="checkbox"
+                      checked={includeSunday}
+                      onChange={e => setIncludeSunday(e.target.checked)}
+                      style={{ width: '16px', height: '16px', accentColor: '#3155D9' }}
+                    />
+                    <span>Schedule Exams on Sunday</span>
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 3. Academic Year & Term Mapping */}
