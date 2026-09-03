@@ -909,6 +909,56 @@ export const hrmsApi = {
 
   async getMyPayslips() {
     return request('/payroll/my-payslips');
+  },
+
+  // --- EMPLOYEE ONBOARDING & INVITATION ---
+  async verifyOnboardingToken(token) {
+    return request('/auth/onboarding/verify-token', {
+      method: 'POST',
+      body: JSON.stringify({ token })
+    });
+  },
+
+  async verifyOnboardingEmail(token) {
+    return request('/auth/onboarding/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token })
+    });
+  },
+
+  async sendOnboardingPhoneOtp(token, phone) {
+    return request('/auth/onboarding/send-phone-otp', {
+      method: 'POST',
+      body: JSON.stringify({ token, phone })
+    });
+  },
+
+  async verifyOnboardingPhoneOtp(token, otp, phone) {
+    return request('/auth/onboarding/verify-phone-otp', {
+      method: 'POST',
+      body: JSON.stringify({ token, otp, phone })
+    });
+  },
+
+  async completeOnboarding(token, password, confirmPassword) {
+    return request('/auth/onboarding/complete', {
+      method: 'POST',
+      body: JSON.stringify({ token, password, confirmPassword })
+    });
+  },
+
+  async sendEmployeeInvitation(employeeId) {
+    return request('/auth/invitation/send', {
+      method: 'POST',
+      body: JSON.stringify({ employee_id: employeeId })
+    });
+  },
+
+  async resendEmployeeInvitation(employeeId) {
+    return request('/auth/invitation/resend', {
+      method: 'POST',
+      body: JSON.stringify({ employee_id: employeeId })
+    });
   }
 };
 

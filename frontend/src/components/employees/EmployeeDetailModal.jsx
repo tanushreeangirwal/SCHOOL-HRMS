@@ -15,7 +15,10 @@ import {
   AlertCircle,
   Copy,
   Check,
-  DollarSign
+  DollarSign,
+  Send,
+  KeyRound,
+  CheckCircle2
 } from 'lucide-react';
 import { hrmsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -26,12 +29,20 @@ import AssignSalaryModal from '../payroll/AssignSalaryModal';
 export function EmployeeDetailModal({ employeeId, onClose }) {
   const { isSuperAdmin, isAdmin, isHR } = useAuth();
   const canManageSalary = isSuperAdmin || isAdmin || isHR;
+  const canManageInvites = isSuperAdmin || isAdmin || isHR;
 
   const [employee, setEmployee] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [copiedField, setCopiedField] = useState(null);
   const [isAssignSalaryOpen, setIsAssignSalaryOpen] = useState(false);
+
+  // Invitation & Onboarding management states
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState(null);
+  const [inviteError, setInviteError] = useState(null);
+  const [inviteCooldown, setInviteCooldown] = useState(0);
+  const [lastInviteUrl, setLastInviteUrl] = useState(null);
 
   const fetchDetails = async () => {
     if (!employeeId) return;
@@ -55,6 +66,38 @@ export function EmployeeDetailModal({ employeeId, onClose }) {
   useEffect(() => {
     fetchDetails();
   }, [employeeId]);
+
+  useEffect(() => {
+    if (inviteCooldown <= 0) return;
+    const timer = setInterval(() => setInviteCooldown(prev => Math.max(0, prev - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [inviteCooldown]);
+
+  const handleSendOrResendInvite = async () => {
+    if (!employee?.id) return;
+    setIsSendingInvite(true);
+    setInviteError(null);
+    setInviteSuccess(null);
+    try {
+      const isResend = employee.account_status && employee.account_status !== 'INVITATION_PENDING';
+      const res = isResend 
+        ? await hrmsApi.resendEmployeeInvitation(employee.id)
+        : await hrmsApi.sendEmployeeInvitation(employee.id);
+
+      if (res && res.success) {
+        setInviteSuccess(res.message);
+        if (res.data?.inviteUrl) setLastInviteUrl(res.data.inviteUrl);
+        setInviteCooldown(45);
+        await fetchDetails();
+      } else {
+        throw new Error(res?.message || 'Failed to send invitation.');
+      }
+    } catch (err) {
+      setInviteError(err.message || 'Unable to send invitation.');
+    } finally {
+      setIsSendingInvite(false);
+    }
+  };
 
   const copyToClipboard = (text, fieldName) => {
     if (!text) return;
@@ -327,7 +370,139 @@ export function EmployeeDetailModal({ employeeId, onClose }) {
                 </div>
               </div>
 
-              {/* 5. Compensation & Salary Structure */}
+              {/* 5. Account Onboarding & Verification Lifecycle */}
+              <div className="detail-card">
+                <div className="detail-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <KeyRound size={17} className="detail-icon" style={{ color: '#3155D9' }} />
+                    <h3>Portal Account & Onboarding Status</h3>
+                  </div>
+
+                  {canManageInvites && employee.account_status !== 'ACTIVE' && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-xs"
+                      onClick={handleSendOrResendInvite}
+                      disabled={isSendingInvite || inviteCooldown > 0}
+                      style={{ fontSize: '0.74rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      <Send size={12} />
+                      <span>
+                        {inviteCooldown > 0 
+                          ? `Wait ${inviteCooldown}s` 
+                          : isSendingInvite 
+                            ? 'Sending...' 
+                            : employee.account_status === 'INVITATION_PENDING' 
+                              ? 'Send Invitation' 
+                              : 'Resend Invitation'}
+                      </span>
+                    </button>
+                  )}
+                </div>
+
+                {inviteSuccess && (
+                  <div style={{ padding: '8px 12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '0.78rem', color: '#166534', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckCircle2 size={14} />
+                    <span>{inviteSuccess}</span>
+                  </div>
+                )}
+
+                {inviteError && (
+                  <div style={{ padding: '8px 12px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '0.78rem', color: '#991b1b', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertCircle size={14} />
+                    <span>{inviteError}</span>
+                  </div>
+                )}
+
+                <div className="detail-grid">
+                  <div className="detail-item">
+                    <span className="detail-label">Account Lifecycle Status</span>
+                    <span className="detail-value">
+                      <span className={`status-pill ${
+                        employee.account_status === 'ACTIVE' 
+                          ? 'status-active' 
+                          : employee.account_status === 'PHONE_VERIFIED' || employee.account_status === 'EMAIL_VERIFIED'
+                            ? 'status-active'
+                            : employee.account_status === 'INVITED'
+                              ? 'status-probation'
+                              : 'status-inactive'
+                      }`}>
+                        <span className="status-dot"></span>
+                        <span>{employee.account_status ? employee.account_status.replace(/_/g, ' ') : 'INVITATION PENDING'}</span>
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="detail-item">
+                    <span className="detail-label">Email Verification</span>
+                    <span className="detail-value" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {employee.email_verified_at ? (
+                        <>
+                          <CheckCircle2 size={14} className="text-emerald" />
+                          <span style={{ color: '#166534', fontWeight: 600, fontSize: '0.84rem' }}>
+                            Verified ({formatDate(employee.email_verified_at)})
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-muted" style={{ fontSize: '0.84rem' }}>Pending Email Confirmation</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="detail-item">
+                    <span className="detail-label">Phone OTP Verification</span>
+                    <span className="detail-value" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {employee.phone_verified_at ? (
+                        <>
+                          <CheckCircle2 size={14} className="text-emerald" />
+                          <span style={{ color: '#166534', fontWeight: 600, fontSize: '0.84rem' }}>
+                            Verified via SMS OTP
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-muted" style={{ fontSize: '0.84rem' }}>Pending Phone OTP</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="detail-item">
+                    <span className="detail-label">Password Setup</span>
+                    <span className="detail-value">
+                      {employee.account_status === 'ACTIVE' ? (
+                        <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.84rem' }}>
+                          Configured by Employee
+                        </span>
+                      ) : (
+                        <span className="text-muted" style={{ fontSize: '0.84rem' }}>
+                          Awaiting Onboarding Setup
+                        </span>
+                      )}
+                    </span>
+                  </div>
+
+                  {lastInviteUrl && (
+                    <div className="detail-item full-width" style={{ backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                      <span className="detail-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Direct Invitation Link</span>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-xs"
+                          onClick={() => copyToClipboard(lastInviteUrl, 'inviteUrl')}
+                          style={{ fontSize: '0.72rem', color: '#3155D9' }}
+                        >
+                          {copiedField === 'inviteUrl' ? <Check size={12} /> : <Copy size={12} />}
+                          <span>{copiedField === 'inviteUrl' ? 'Copied' : 'Copy Link'}</span>
+                        </button>
+                      </span>
+                      <span className="detail-value text-monospace" style={{ fontSize: '0.75rem', wordBreak: 'break-all', color: '#475569' }}>
+                        {lastInviteUrl}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 6. Compensation & Salary Structure */}
               <div className="detail-card">
                 <div className="detail-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

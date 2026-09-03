@@ -62,7 +62,8 @@ export function AddEmployeeModal({
     department_id: employeeToEdit?.department_id || '',
     designation_id: employeeToEdit?.designation_id || '',
     employment_type_id: employeeToEdit?.employment_type_id || '',
-    reporting_manager_id: employeeToEdit?.reporting_manager_id || ''
+    reporting_manager_id: employeeToEdit?.reporting_manager_id || '',
+    send_account_invitation: true
   });
 
   // Load dropdown resources
@@ -612,6 +613,28 @@ export function AddEmployeeModal({
                   />
                 </div>
               </div>
+
+              {!isEditMode && (
+                <div style={{ padding: '14px 16px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', marginTop: '14px' }}>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', margin: 0 }}>
+                    <input
+                      type="checkbox"
+                      name="send_account_invitation"
+                      checked={formData.send_account_invitation !== false}
+                      onChange={(e) => setFormData(prev => ({ ...prev, send_account_invitation: e.target.checked }))}
+                      style={{ marginTop: '3px', width: '16px', height: '16px', accentColor: '#3155D9' }}
+                    />
+                    <div>
+                      <span style={{ fontWeight: 700, fontSize: '0.86rem', color: '#166534', display: 'block' }}>
+                        Send Account Onboarding Invitation
+                      </span>
+                      <span style={{ fontSize: '0.76rem', color: '#15803d', lineHeight: 1.4, display: 'block', marginTop: '2px' }}>
+                        Dispatches a secure activation link to the employee's email. They will verify their email & phone number and create their own password.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              )}
             </div>
           )}
 

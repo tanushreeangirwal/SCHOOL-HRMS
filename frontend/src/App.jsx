@@ -38,6 +38,9 @@ import { LeaveModuleView } from './components/leave/LeaveModuleView';
 import { AcademicCalendarModule } from './components/calendar/AcademicCalendarModule';
 import PayrollModule from './components/payroll/PayrollModule';
 import MyPayslipsView from './components/payroll/MyPayslipsView';
+import OnboardingWizard from './components/auth/OnboardingWizard';
+import MobileBottomNav from './components/layout/MobileBottomNav';
+import MobileProfileView from './components/profile/MobileProfileView';
 import Toast from './components/common/Toast';
 import { TableSkeleton, LoadingSpinner } from './components/common/LoadingSpinner';
 import EmptyState from './components/common/EmptyState';
@@ -697,6 +700,22 @@ function MainAppShell() {
     );
   }
 
+  // 0. Onboarding Invitation Route
+  const urlParams = new URLSearchParams(window.location.search);
+  const onboardingToken = urlParams.get('token') || (window.location.pathname.startsWith('/onboard') ? urlParams.get('invite') : null);
+
+  if (!isAuthenticated && (onboardingToken || window.location.pathname === '/onboard')) {
+    return (
+      <OnboardingWizard
+        token={onboardingToken}
+        onComplete={() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          window.location.href = '/';
+        }}
+      />
+    );
+  }
+
   // Unauthenticated Login Screen
   if (!isAuthenticated) {
     return (
@@ -1112,6 +1131,13 @@ function MainAppShell() {
               <MyPayslipsView />
             </div>
           )}
+
+          {/* VIEW 13: MY PROFILE (MOBILE & SELF-SERVICE) */}
+          {activeView === 'profile' && (
+            <div className="mobile-profile-shell">
+              <MobileProfileView onOpen2FAModal={() => setIs2FAModalOpen(true)} />
+            </div>
+          )}
         </main>
       </div>
 
@@ -1373,6 +1399,30 @@ function MainAppShell() {
           }}
         />
       )}
+
+      {/* Mobile Bottom Navigation Bar (< 768px Viewports) */}
+      <MobileBottomNav
+        activeView={activeView}
+        setActiveView={setActiveView}
+        onOpen2FAModal={() => setIs2FAModalOpen(true)}
+        onNavigateToCalendar={() => {
+          setActiveView('calendar');
+          setCalendarSubTab('overview');
+        }}
+        onNavigateToAttendance={() => {
+          if (isEmployee) {
+            setActiveView('attendance');
+            setAttendanceSubTab('employee');
+          } else {
+            setActiveView('my-attendance');
+          }
+        }}
+        onNavigateToLeave={() => {
+          setActiveView('leave');
+          setLeaveSubTab(isEmployee ? 'my-requests' : 'dashboard');
+        }}
+        onNavigateToPayslips={() => setActiveView('my-payslips')}
+      />
     </div>
   );
 }

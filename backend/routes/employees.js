@@ -1,6 +1,8 @@
 const express = require("express");
+const crypto = require("crypto");
 const pool = require("../db");
 const { authenticateToken, requirePermission } = require("../middleware/auth");
+const emailService = require("../services/emailService");
 
 const router = express.Router();
 
@@ -80,6 +82,10 @@ router.get("/", authenticateToken, async (req, res) => {
         esa.monthly_gross,
         esa.annual_ctc,
         esa.effective_from AS salary_effective_from,
+        u.id AS user_account_id,
+        COALESCE(u.account_status, 'INVITATION_PENDING') AS account_status,
+        u.email_verified_at,
+        u.phone_verified_at,
         e.created_at,
         e.updated_at
       FROM employees e
@@ -90,6 +96,7 @@ router.get("/", authenticateToken, async (req, res) => {
       LEFT JOIN shifts s ON e.current_shift_id = s.id
       LEFT JOIN employee_salary_assignments esa ON e.id = esa.employee_id AND esa.is_active = true
       LEFT JOIN salary_structures ss ON esa.salary_structure_id = ss.id
+      LEFT JOIN users u ON e.id = u.employee_id
     `;
 
     const whereClauses = [];
@@ -196,7 +203,11 @@ router.get("/:id", authenticateToken, async (req, res) => {
         ss.code AS salary_structure_code,
         esa.monthly_gross,
         esa.annual_ctc,
-        esa.effective_from AS salary_effective_from
+        esa.effective_from AS salary_effective_from,
+        u.id AS user_account_id,
+        COALESCE(u.account_status, 'INVITATION_PENDING') AS account_status,
+        u.email_verified_at,
+        u.phone_verified_at
       FROM employees e
       LEFT JOIN departments d ON e.department_id = d.id
       LEFT JOIN designations des ON e.designation_id = des.id
@@ -205,6 +216,7 @@ router.get("/:id", authenticateToken, async (req, res) => {
       LEFT JOIN shifts s ON e.current_shift_id = s.id
       LEFT JOIN employee_salary_assignments esa ON e.id = esa.employee_id AND esa.is_active = true
       LEFT JOIN salary_structures ss ON esa.salary_structure_id = ss.id
+      LEFT JOIN users u ON e.id = u.employee_id
       WHERE e.id = $1
     `, [requestedId]);
 
@@ -255,7 +267,8 @@ router.post("/", authenticateToken, requirePermission("employees:create"), async
       joining_date,
       employment_status,
       reporting_manager_id,
-      profile_photo_url
+      profile_photo_url,
+      send_account_invitation
     } = req.body;
 
     if (!first_name || !first_name.trim()) {
@@ -335,10 +348,55 @@ router.post("/", authenticateToken, requirePermission("employees:create"), async
       ]
     );
 
+    const createdEmployee = result.rows[0];
+
+    // Optional: Send Account Onboarding Invitation if selected
+    let invitationInfo = null;
+    if (send_account_invitation === true && (work_email || personal_email)) {
+      try {
+        const inviteEmail = (work_email || personal_email).trim().toLowerCase();
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+        const roleRes = await pool.query(`SELECT id FROM hr_roles WHERE name = 'Employee' LIMIT 1;`);
+        const defaultRoleId = roleRes.rows[0]?.id || 'e1e81770-815b-4f56-a3fa-372167696c85';
+
+        await pool.query(`
+          INSERT INTO users (
+            employee_id, role_id, email, password_hash, is_active, 
+            account_status, invitation_token_hash, invitation_expires_at, created_at, updated_at
+          )
+          VALUES ($1, $2, $3, NULL, false, 'INVITED', $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        `, [createdEmployee.id, defaultRoleId, inviteEmail, tokenHash, expiresAt]);
+
+        const emailResult = await emailService.sendInvitation({
+          to: inviteEmail,
+          name: `${first_name} ${last_name || ''}`.trim(),
+          employeeCode: createdEmployee.employee_code,
+          rawToken,
+          expiresAt
+        });
+
+        invitationInfo = {
+          account_status: 'INVITED',
+          delivered: emailResult.delivered,
+          provider: emailResult.provider,
+          inviteUrl: emailResult.inviteUrl
+        };
+      } catch (inviteErr) {
+        console.error('Auto invitation error during employee registration:', inviteErr.message);
+      }
+    }
+
     res.status(201).json({
       success: true,
       message: `Employee "${first_name} ${last_name || ''}" created successfully with code ${employee_code}.`,
-      data: result.rows[0]
+      data: {
+        ...createdEmployee,
+        account_status: invitationInfo ? 'INVITED' : 'INVITATION_PENDING',
+        invitation: invitationInfo
+      }
     });
   } catch (error) {
     console.error("Error creating employee:", error.message);
