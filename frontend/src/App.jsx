@@ -790,6 +790,15 @@ function MainAppShell() {
                   setAttendanceSubTab('employee');
                 }}
                 onNavigateToMyShift={() => setActiveView('my-shift')}
+                onNavigateToMyLeaves={() => {
+                  setActiveView('leave');
+                  setLeaveSubTab('my-requests');
+                }}
+                onNavigateToMyPayslips={() => setActiveView('my-payslips')}
+                onNavigateToCalendar={() => {
+                  setActiveView('calendar');
+                  setCalendarSubTab('overview');
+                }}
               />
             ) : (
               <DashboardView
@@ -798,7 +807,12 @@ function MainAppShell() {
                 onNavigateToEmployees={() => setActiveView('employees')}
                 onNavigateToDepartments={() => { setActiveView('departments'); setDepartmentSubTab('view'); }}
                 onNavigateToAttendance={() => { setActiveView('attendance'); setAttendanceSubTab('dashboard'); }}
+                onNavigateToShifts={() => { setActiveView('shifts'); setShiftSubTab('list'); }}
+                onNavigateToLeave={(subtab = 'dashboard') => { setActiveView('leave'); setLeaveSubTab(subtab); }}
+                onNavigateToCalendar={(subtab = 'overview') => { setActiveView('calendar'); setCalendarSubTab(subtab); }}
+                onNavigateToPayroll={(subtab = 'dashboard') => { setActiveView('payroll'); setPayrollSubTab(subtab); }}
                 onNavigateToMyAttendance={() => { setActiveView('my-attendance'); setAttendanceSubTab('mark'); }}
+                onNavigateToMyPayslips={() => setActiveView('my-payslips')}
                 onAddEmployee={() => setIsAddEmployeeModalOpen(true)}
                 onAddDepartment={() => { setEditingDepartment(null); setIsAddDeptModalOpen(true); }}
                 onOpen2FAModal={() => setIs2FAModalOpen(true)}

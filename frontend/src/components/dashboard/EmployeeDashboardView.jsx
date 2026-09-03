@@ -14,7 +14,12 @@ import {
   HelpCircle,
   Check,
   Building2,
-  UserCheck
+  UserCheck,
+  DollarSign,
+  CreditCard,
+  FileText,
+  CalendarCheck,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { hrmsApi } from '../../services/api';
@@ -22,12 +27,19 @@ import { StaffAvatar } from '../common/StaffAvatar';
 
 export function EmployeeDashboardView({
   onNavigateToAttendanceHistory,
-  onNavigateToMyShift
+  onNavigateToMyShift,
+  onNavigateToMyLeaves,
+  onNavigateToMyPayslips,
+  onNavigateToCalendar
 }) {
   const { user } = useAuth();
 
   const [todayData, setTodayData] = useState(null);
   const [monthlySummary, setMonthlySummary] = useState(null);
+  const [leaveSummary, setLeaveSummary] = useState(null);
+  const [latestPayslip, setLatestPayslip] = useState(null);
+  const [calendarOverview, setCalendarOverview] = useState(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
@@ -49,9 +61,12 @@ export function EmployeeDashboardView({
     setError(null);
 
     try {
-      const [todayRes, summaryRes] = await Promise.all([
+      const [todayRes, summaryRes, leaveRes, payslipsRes, calRes] = await Promise.all([
         hrmsApi.getMyTodayAttendance(),
-        hrmsApi.getMyAttendanceSummary()
+        hrmsApi.getMyAttendanceSummary(),
+        hrmsApi.getMyLeaveSummary().catch(() => null),
+        hrmsApi.getMyPayslips().catch(() => null),
+        hrmsApi.getCalendarOverview().catch(() => null)
       ]);
 
       if (todayRes && todayRes.success) {
@@ -62,6 +77,18 @@ export function EmployeeDashboardView({
 
       if (summaryRes && summaryRes.success) {
         setMonthlySummary(summaryRes.data?.summary || null);
+      }
+
+      if (leaveRes && leaveRes.success) {
+        setLeaveSummary(leaveRes.data);
+      }
+
+      if (payslipsRes && payslipsRes.success && Array.isArray(payslipsRes.data) && payslipsRes.data.length > 0) {
+        setLatestPayslip(payslipsRes.data[0]);
+      }
+
+      if (calRes && calRes.success) {
+        setCalendarOverview(calRes.data);
       }
     } catch (err) {
       console.error('Fetch employee dashboard error:', err);
@@ -162,6 +189,13 @@ export function EmployeeDashboardView({
 
   const currentMonthName = currentTime.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
+  // Self-Service Derived Metrics
+  const pendingLeavesCount = leaveSummary?.pending_requests_count || (leaveSummary?.requests?.filter(r => r.status === 'Pending').length || 0);
+  const remainingLeaveDays = leaveSummary?.balances ? leaveSummary.balances.reduce((sum, b) => sum + Number(b.remaining_days || 0), 0) : null;
+  
+  const upcomingSchoolEvent = calendarOverview?.upcoming_events?.[0] || calendarOverview?.upcoming_holiday || null;
+  const activeTerm = calendarOverview?.active_term?.name || calendarOverview?.active_year?.name || 'Active Academic Term';
+
   return (
     <div className="employee-dashboard-container" style={{ width: '100%', maxWidth: '1100px', margin: '0 auto', boxSizing: 'border-box' }}>
       
@@ -199,32 +233,53 @@ export function EmployeeDashboardView({
               <span className="code-badge">
                 {employee.employee_code}
               </span>
+              <span className="status-pill status-active" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
+                {employee.designation_name}
+              </span>
             </div>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 2px 0', color: '#172033', letterSpacing: '-0.02em' }}>
+
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, margin: '0 0 4px 0', color: '#172033', letterSpacing: '-0.02em' }}>
               {greeting}, {employee.first_name}!
             </h1>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
-              {employee.designation_name} • {employee.department_name}
+
+            <p style={{ fontSize: '0.84rem', color: '#64748b', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>{employee.department_name}</span>
+              <span>•</span>
+              <span style={{ color: '#10b981', fontWeight: 600 }}>Active Faculty Dossier</span>
             </p>
           </div>
         </div>
 
-        {/* Live Date & Clock Widget */}
-        <div style={{ textAlign: 'right', backgroundColor: '#f8fafc', padding: '10px 18px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#172033', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em' }}>
+        {/* Live Digital Clock */}
+        <div 
+          className="employee-live-clock-card"
+          style={{
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            padding: '12px 20px',
+            textAlign: 'right',
+            minWidth: '180px'
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px' }}>
+            <CalendarClock size={13} style={{ color: '#3155D9' }} />
+            <span>{formattedCurrentDate}</span>
+          </div>
+          <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#172033', letterSpacing: '-0.02em', marginTop: '2px', fontFamily: 'monospace' }}>
             {formattedLiveClock}
           </div>
-          <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px', fontWeight: 500 }}>
-            {formattedCurrentDate}
+          <div style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '2px' }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }}></span>
+            <span>Campus Terminal Sync Active</span>
           </div>
         </div>
       </div>
 
-      {/* Action Messages */}
       {actionSuccess && (
-        <div className="assign-alert-banner success-banner" style={{ marginBottom: '20px' }}>
-          <CheckCircle2 size={18} className="alert-banner-icon" />
-          <div className="alert-banner-content" style={{ fontSize: '0.88rem', fontWeight: 600 }}>{actionSuccess}</div>
+        <div className="assign-alert-success" style={{ marginBottom: '20px' }}>
+          <CheckCircle2 size={18} className="alert-icon" />
+          <div className="alert-text">{actionSuccess}</div>
         </div>
       )}
 
@@ -235,12 +290,123 @@ export function EmployeeDashboardView({
         </div>
       )}
 
-      {/* 2. Main Grid: Today's Attendance Card + Today's Shift Card */}
+      {/* 2. Self-Service Overview KPI Grid (4 Tailored Cards) */}
+      <div className="dashboard-metrics-grid" style={{ marginBottom: '24px' }}>
+        {/* Card 1: MY ATTENDANCE */}
+        <div 
+          className="kpi-card" 
+          onClick={onNavigateToAttendanceHistory} 
+          style={{ cursor: 'pointer' }}
+          title="Click to view full attendance register"
+        >
+          <div className="kpi-header">
+            <span className="kpi-title">Today's Attendance</span>
+            <div className="kpi-icon-pill emerald">
+              <Clock size={18} />
+            </div>
+          </div>
+          <div className="kpi-body">
+            <span className="kpi-value" style={{ fontSize: '1.4rem' }}>
+              {state === 'CHECKED_IN' ? 'On Duty' : state === 'CHECKED_OUT' ? 'Shift Completed' : state === 'NOT_MARKED' ? 'Pending Check-In' : state}
+            </span>
+            <div className="kpi-trend trend-positive" style={{ marginTop: '4px' }}>
+              <span>
+                {attendance?.check_in ? `In: ${new Date(attendance.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : `Shift: ${shift.start_time_formatted}`}
+                {attendance?.working_hours && ` • ${attendance.working_hours}`}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: MY LEAVE PIPELINE */}
+        <div 
+          className="kpi-card" 
+          onClick={onNavigateToMyLeaves} 
+          style={{ cursor: 'pointer' }}
+          title="Click to apply or review your leave requests"
+        >
+          <div className="kpi-header">
+            <span className="kpi-title">Leave Status</span>
+            <div className="kpi-icon-pill amber">
+              <CalendarCheck size={18} />
+            </div>
+          </div>
+          <div className="kpi-body">
+            <span className="kpi-value" style={{ fontSize: '1.4rem' }}>
+              {pendingLeavesCount > 0 ? `${pendingLeavesCount} Pending` : remainingLeaveDays != null ? `${remainingLeaveDays} Days Bal` : 'Active'}
+            </span>
+            <div className="kpi-trend trend-neutral" style={{ marginTop: '4px' }}>
+              <span>
+                {pendingLeavesCount > 0 ? 'Awaiting administrative approval' : 'Paid leaves available'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: MY LATEST PAYSLIP */}
+        <div 
+          className="kpi-card" 
+          onClick={onNavigateToMyPayslips} 
+          style={{ cursor: 'pointer' }}
+          title="Click to view and download your official payslips"
+        >
+          <div className="kpi-header">
+            <span className="kpi-title">Latest Payslip</span>
+            <div className="kpi-icon-pill indigo">
+              <DollarSign size={18} />
+            </div>
+          </div>
+          <div className="kpi-body">
+            <span className="kpi-value" style={{ fontSize: '1.4rem' }}>
+              {latestPayslip?.net_salary != null ? `₹${Number(latestPayslip.net_salary).toLocaleString('en-IN')}` : 'Generated'}
+            </span>
+            <div className="kpi-trend trend-positive" style={{ marginTop: '4px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <span>{latestPayslip ? `${latestPayslip.payroll_year}-${String(latestPayslip.payroll_month).padStart(2, '0')}` : 'September 2026'}</span>
+                {latestPayslip?.status && (
+                  <span className={`badge badge-${latestPayslip.status === 'paid' ? 'success' : latestPayslip.status === 'approved' ? 'info' : 'warning'}`} style={{ fontSize: '0.65rem', padding: '1px 5px' }}>
+                    {latestPayslip.status}
+                  </span>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: UPCOMING CALENDAR EVENT */}
+        <div 
+          className="kpi-card" 
+          onClick={onNavigateToCalendar} 
+          style={{ cursor: 'pointer' }}
+          title="Click to view school academic calendar"
+        >
+          <div className="kpi-header">
+            <span className="kpi-title">Next School Event</span>
+            <div className="kpi-icon-pill sky">
+              <Calendar size={18} />
+            </div>
+          </div>
+          <div className="kpi-body">
+            <span className="kpi-value" style={{ fontSize: '1.2rem', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {upcomingSchoolEvent?.title || 'Academic Session'}
+            </span>
+            <div className="kpi-trend trend-neutral" style={{ marginTop: '4px' }}>
+              <span>
+                {upcomingSchoolEvent ? (
+                  `${upcomingSchoolEvent.days_remaining > 0 ? `${upcomingSchoolEvent.days_remaining} days away` : 'Today'} • ${upcomingSchoolEvent.event_type || 'Event'}`
+                ) : (
+                  activeTerm
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Main Grid: Today's Attendance Check-in Card + Shift Schedule Card */}
       <div className="employee-main-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(0, 1fr)', gap: '20px', marginBottom: '24px' }}>
         
-        {/* ================================================================= */}
-        {/* ATTENDANCE CARD (Prominent Mobile-First Check In / Out) */}
-        {/* ================================================================= */}
+        {/* Attendance Action Card */}
         <div 
           className="table-wrapper-card employee-attendance-card" 
           style={{
@@ -253,7 +419,6 @@ export function EmployeeDashboardView({
             overflow: 'hidden'
           }}
         >
-          {/* Card Top Label */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div className="stat-icon-badge stat-emerald" style={{ width: '36px', height: '36px', borderRadius: '8px' }}>
@@ -261,7 +426,7 @@ export function EmployeeDashboardView({
               </div>
               <div>
                 <h2 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
-                  Today's Attendance
+                  Today's Attendance Clock
                 </h2>
                 <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
                   Web Self-Service • {formattedCurrentDate}
@@ -279,7 +444,6 @@ export function EmployeeDashboardView({
             </button>
           </div>
 
-          {/* Card Dynamic Body */}
           <div style={{ margin: '14px 0', textAlign: 'center' }}>
             {isLoading ? (
               <div style={{ padding: '30px', color: 'var(--text-muted)' }}>
@@ -287,7 +451,6 @@ export function EmployeeDashboardView({
                 <span style={{ fontSize: '0.84rem' }}>Checking attendance records...</span>
               </div>
             ) : !isWorkingDay ? (
-              /* NON-WORKING DAY */
               <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px 16px' }}>
                 <Coffee size={32} style={{ color: '#94a3b8', margin: '0 auto 8px' }} />
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
@@ -298,7 +461,6 @@ export function EmployeeDashboardView({
                 </p>
               </div>
             ) : state === 'NOT_MARKED' ? (
-              /* STATE 1: NOT MARKED -> LARGE CHECK IN BUTTON */
               <div>
                 <div style={{ marginBottom: '16px' }}>
                   <span className="status-pill badge-inactive" style={{ fontSize: '0.82rem', padding: '4px 12px' }}>
@@ -318,53 +480,54 @@ export function EmployeeDashboardView({
                   style={{
                     width: '100%',
                     maxWidth: '320px',
-                    height: '52px',
-                    fontSize: '1.05rem',
+                    padding: '14px 24px',
+                    fontSize: '1rem',
                     fontWeight: 800,
-                    borderRadius: '8px',
-                    letterSpacing: '0.04em',
-                    boxShadow: '0 4px 14px 0 rgba(49, 85, 217, 0.3)',
                     margin: '0 auto',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '10px'
+                    gap: '10px',
+                    borderRadius: '10px',
+                    boxShadow: '0 4px 14px rgba(49, 85, 217, 0.3)'
                   }}
                 >
                   {isCheckingIn ? (
                     <>
-                      <Loader2 size={20} className="spin-animation" />
+                      <Loader2 size={18} className="spin-animation" />
                       <span>Recording Check-In...</span>
                     </>
                   ) : (
                     <>
-                      <UserCheck size={20} />
-                      <span>CHECK IN</span>
+                      <CheckCircle2 size={18} />
+                      <span>Mark Morning Check-In</span>
                     </>
                   )}
                 </button>
-                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '8px', display: 'block' }}>
-                  Grace period: {shift.late_grace_minutes} mins from {shift.start_time_formatted}
-                </span>
               </div>
             ) : state === 'CHECKED_IN' ? (
-              /* STATE 2: CHECKED IN -> LARGE CHECK OUT BUTTON */
               <div>
-                <div style={{ marginBottom: '16px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <CheckCircle2 size={18} style={{ color: '#166534' }} />
-                    <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#166534' }}>
-                      Checked In at {attendance?.check_in_formatted}
-                    </span>
-                    {attendance?.status === 'Late' && (
-                      <span className="status-pill badge-probation" style={{ fontSize: '0.72rem' }}>
-                        Late Arrival
-                      </span>
+                <div style={{ marginBottom: '16px' }}>
+                  <span className="status-pill status-active" style={{ fontSize: '0.82rem', padding: '4px 12px' }}>
+                    <span className="status-dot" style={{ backgroundColor: '#10b981' }}></span>
+                    <span>Status: Checked In</span>
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '12px' }}>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Check-In Time</span>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#10b981' }}>
+                        {attendance?.check_in ? new Date(attendance.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </div>
+                    </div>
+                    {attendance?.late_minutes > 0 && (
+                      <div>
+                        <span style={{ fontSize: '0.72rem', color: '#f59e0b', textTransform: 'uppercase', fontWeight: 600 }}>Late Arrival</span>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f59e0b' }}>
+                          +{attendance.late_minutes}m
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <span style={{ fontSize: '0.78rem', color: '#166534' }}>
-                    Shift in progress. Remember to check out before leaving campus.
-                  </span>
                 </div>
 
                 <button
@@ -375,83 +538,52 @@ export function EmployeeDashboardView({
                   style={{
                     width: '100%',
                     maxWidth: '320px',
-                    height: '52px',
-                    fontSize: '1.05rem',
-                    fontWeight: 800,
-                    borderRadius: '8px',
-                    backgroundColor: '#172033',
-                    color: '#ffffff',
-                    border: 'none',
-                    letterSpacing: '0.04em',
-                    boxShadow: '0 4px 14px 0 rgba(23, 32, 51, 0.25)',
+                    padding: '12px 24px',
+                    fontSize: '0.92rem',
+                    fontWeight: 700,
                     margin: '0 auto',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '10px'
+                    gap: '8px',
+                    borderRadius: '10px'
                   }}
                 >
                   {isCheckingOut ? (
                     <>
-                      <Loader2 size={20} className="spin-animation" />
+                      <Loader2 size={16} className="spin-animation" />
                       <span>Recording Check-Out...</span>
                     </>
                   ) : (
                     <>
-                      <Clock size={20} />
-                      <span>CHECK OUT</span>
+                      <Clock size={16} />
+                      <span>Record End of Shift Check-Out</span>
                     </>
                   )}
                 </button>
               </div>
-            ) : state === 'COMPLETED' ? (
-              /* STATE 3: COMPLETED FOR TODAY */
-              <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '18px 16px' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#dcfce7', color: '#166534', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700, marginBottom: '12px' }}>
-                  <Check size={14} />
-                  <span>Attendance Completed for Today</span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '6px' }}>
-                  <div style={{ backgroundColor: '#ffffff', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Check In</span>
-                    <strong style={{ fontSize: '0.92rem', color: 'var(--text-main)' }}>{attendance?.check_in_formatted}</strong>
-                  </div>
-                  <div style={{ backgroundColor: '#ffffff', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Check Out</span>
-                    <strong style={{ fontSize: '0.92rem', color: 'var(--text-main)' }}>{attendance?.check_out_formatted}</strong>
-                  </div>
-                  <div style={{ backgroundColor: '#ffffff', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Working Hours</span>
-                    <strong style={{ fontSize: '0.92rem', color: '#166534' }}>{attendance?.working_hours}</strong>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-xs"
-                    onClick={onNavigateToAttendanceHistory}
-                    style={{ color: '#3155D9', fontWeight: 600 }}
-                  >
-                    View Complete Attendance Log →
-                  </button>
-                </div>
+            ) : state === 'CHECKED_OUT' ? (
+              <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '20px 16px' }}>
+                <CheckCircle2 size={32} style={{ color: '#059669', margin: '0 auto 8px' }} />
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#065f46', margin: '0 0 4px 0' }}>
+                  Daily Shift Completed
+                </h3>
+                <p style={{ fontSize: '0.84rem', color: '#047857', margin: 0 }}>
+                  Working Hours: <strong>{attendance?.working_hours || 'Complete'}</strong>
+                </p>
               </div>
             ) : (
-              /* ON LEAVE / ABSENT */
               <div style={{ backgroundColor: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '8px', padding: '20px 16px' }}>
                 <span className="status-pill" style={{ backgroundColor: '#f5f3ff', color: '#7c3aed', fontSize: '0.84rem' }}>
                   Status: {state}
                 </span>
                 <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '8px 0 0 0' }}>
-                  Official absence recorded on institutional file.
+                  Official absence or leave recorded on institutional file.
                 </p>
               </div>
             )}
           </div>
 
-          {/* Correction Notice Footer */}
           <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <HelpCircle size={13} />
@@ -463,9 +595,7 @@ export function EmployeeDashboardView({
           </div>
         </div>
 
-        {/* ================================================================= */}
-        {/* TODAY'S SHIFT CARD */}
-        {/* ================================================================= */}
+        {/* Today's Shift Details Card */}
         <div 
           className="table-wrapper-card" 
           style={{
@@ -480,54 +610,57 @@ export function EmployeeDashboardView({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div className="stat-icon-badge stat-indigo" style={{ width: '36px', height: '36px', borderRadius: '8px' }}>
-                  <CalendarClock size={18} />
+                  <Building2 size={18} />
                 </div>
                 <div>
                   <h2 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
-                    My Assigned Shift
+                    My Work Schedule
                   </h2>
                   <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
-                    Work schedule & timing rules
+                    Assigned Teaching Shift
                   </span>
                 </div>
               </div>
-              <span className="code-badge" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
-                {shift.code || 'REG-TEACH'}
-              </span>
+
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs"
+                onClick={onNavigateToMyShift}
+                style={{ fontSize: '0.75rem', color: 'var(--color-primary)' }}
+              >
+                View Roster
+              </button>
             </div>
 
-            {/* Shift Details Box */}
-            <div style={{ backgroundColor: '#f8fafc', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '16px', marginBottom: '14px' }}>
-              <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 6px 0' }}>
-                {shift.name}
-              </h3>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e40af', margin: '6px 0' }}>
-                {shift.start_time_formatted} – {shift.end_time_formatted}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', fontSize: '0.84rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Shift Name:</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{shift.name}</span>
               </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Working Days: <strong>{(shift.working_days || []).join(', ')}</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', fontSize: '0.84rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Timings:</span>
+                <span style={{ fontWeight: 700, color: '#3155D9' }}>{shift.start_time_formatted} – {shift.end_time_formatted}</span>
               </div>
-              {shift.break_start_time && (
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  Break: <strong>{shift.break_start_time} – {shift.break_end_time}</strong>
-                </div>
-              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', fontSize: '0.84rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Grace Period:</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{shift.late_grace_minutes} Minutes</span>
+              </div>
             </div>
           </div>
 
           <button
             type="button"
-            className="btn btn-ghost btn-sm"
+            className="btn btn-secondary btn-sm"
             onClick={onNavigateToMyShift}
-            style={{ width: '100%', justifyContent: 'space-between', color: 'var(--color-primary)', fontSize: '0.82rem' }}
+            style={{ width: '100%', marginTop: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
           >
-            <span>View Full Shift Schedule</span>
+            <span>My Shift Details</span>
             <ArrowRight size={14} />
           </button>
         </div>
       </div>
 
-      {/* 3. Monthly Attendance Summary KPIs */}
+      {/* 4. Monthly Attendance Summary Row */}
       <div style={{ marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
@@ -579,15 +712,15 @@ export function EmployeeDashboardView({
               <div className="stat-number-wrapper">
                 <span className="stat-number" style={{ color: '#2563eb' }}>{monthlySummary?.half_day ?? '—'}</span>
               </div>
-              <span className="stat-subtext">Partial shifts</span>
+              <span className="stat-subtext">Partial hours</span>
             </div>
-            <div className="stat-icon-badge" style={{ backgroundColor: '#eff6ff', color: '#2563eb' }}>
-              <CalendarClock size={18} />
+            <div className="stat-icon-badge">
+              <Clock size={18} />
             </div>
           </div>
 
           {/* On Leave */}
-          <div className="stat-card stat-slate">
+          <div className="stat-card stat-purple" style={{ borderLeftColor: '#8b5cf6' }}>
             <div className="stat-content">
               <span className="stat-title">On Leave</span>
               <div className="stat-number-wrapper">
@@ -595,21 +728,21 @@ export function EmployeeDashboardView({
               </div>
               <span className="stat-subtext">Approved leaves</span>
             </div>
-            <div className="stat-icon-badge" style={{ backgroundColor: '#f5f3ff', color: '#7c3aed' }}>
-              <Calendar size={18} />
+            <div className="stat-icon-badge">
+              <CalendarCheck size={18} />
             </div>
           </div>
 
           {/* Absent */}
-          <div className="stat-card stat-amber" style={{ borderLeftColor: '#ef4444' }}>
+          <div className="stat-card stat-rose">
             <div className="stat-content">
               <span className="stat-title">Absent</span>
               <div className="stat-number-wrapper">
-                <span className="stat-number" style={{ color: '#dc2626' }}>{monthlySummary?.absent ?? '—'}</span>
+                <span className="stat-number text-rose">{monthlySummary?.absent ?? '—'}</span>
               </div>
-              <span className="stat-subtext">Unexcused</span>
+              <span className="stat-subtext">Unexcused absence</span>
             </div>
-            <div className="stat-icon-badge" style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}>
+            <div className="stat-icon-badge">
               <XCircle size={18} />
             </div>
           </div>
