@@ -55,6 +55,29 @@ app.use(express.json());
 
 const pool = require("./db");
 
+// Auto-migrate schema updates safely on startup (supports Neon, Render, Supabase, local)
+async function ensureSchemaUpdates() {
+  try {
+    await pool.query(`
+      ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS account_status VARCHAR(50) DEFAULT 'ACTIVE';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS invitation_token_hash TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS invitation_expires_at TIMESTAMP;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMP;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_otp_hash TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_otp_expires_at TIMESTAMP;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_otp_attempts INT DEFAULT 0;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_otp_last_sent_at TIMESTAMP;
+      UPDATE users SET account_status = 'ACTIVE' WHERE account_status IS NULL;
+    `);
+    console.log("Database schema auto-migration verified successfully.");
+  } catch (err) {
+    console.error("Schema auto-migration check notice:", err.message);
+  }
+}
+ensureSchemaUpdates();
+
 // Health check
 app.get("/api/health", async (req, res) => {
   try {

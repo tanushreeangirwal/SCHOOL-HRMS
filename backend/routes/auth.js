@@ -83,20 +83,38 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Locate user by email or by employee code
-    const userResult = await pool.query(`
-      SELECT 
-        u.id, 
-        u.email, 
-        u.password_hash, 
-        u.is_active, 
-        u.account_status,
-        u.two_factor_enabled
-      FROM users u
-      LEFT JOIN employees e ON u.employee_id = e.id
-      WHERE LOWER(u.email) = $1 OR LOWER(e.employee_code) = $1
-      LIMIT 1;
-    `, [identifier]);
+    // Locate user by email or by employee code (with fallback for pending migrations)
+    let userResult;
+    try {
+      userResult = await pool.query(`
+        SELECT 
+          u.id, 
+          u.email, 
+          u.password_hash, 
+          u.is_active, 
+          u.account_status,
+          u.two_factor_enabled
+        FROM users u
+        LEFT JOIN employees e ON u.employee_id = e.id
+        WHERE LOWER(u.email) = $1 OR LOWER(e.employee_code) = $1
+        LIMIT 1;
+      `, [identifier]);
+    } catch (colErr) {
+      console.warn('Fallback query without account_status:', colErr.message);
+      userResult = await pool.query(`
+        SELECT 
+          u.id, 
+          u.email, 
+          u.password_hash, 
+          u.is_active, 
+          'ACTIVE' AS account_status,
+          u.two_factor_enabled
+        FROM users u
+        LEFT JOIN employees e ON u.employee_id = e.id
+        WHERE LOWER(u.email) = $1 OR LOWER(e.employee_code) = $1
+        LIMIT 1;
+      `, [identifier]);
+    }
 
     if (userResult.rows.length === 0) {
       return res.status(401).json({
@@ -175,7 +193,8 @@ router.post('/login', async (req, res) => {
     console.error('Login error:', error);
     return res.status(500).json({
       success: false,
-      message: 'An internal server error occurred during login.'
+      message: 'An internal server error occurred during login.',
+      error: error.message
     });
   }
 });
