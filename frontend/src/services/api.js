@@ -3,7 +3,16 @@
  * Clean, production-ready client for REST API endpoints.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const isLocalhost = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' || 
+  window.location.hostname === '127.0.0.1'
+);
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || (
+  isLocalhost 
+    ? 'http://localhost:5000/api' 
+    : 'https://school-hrms-backend-aukd.onrender.com/api'
+);
 const TOKEN_STORAGE_KEY = 'school_hrms_auth_token';
 
 /**
