@@ -16,34 +16,33 @@
    Sidebar Clean Layout
    -------------------------------------------------------------------------- */
 .sidebar-clean {
-  width: 270px;
-  min-width: 270px;
-  background: linear-gradient(180deg, #0b1526 0%, #08101d 100%);
+  width: 260px;
+  min-width: 260px;
+  background-color: #0b1324; /* Restrained, institutional deep navy */
   color: #ffffff;
   display: flex;
   flex-direction: column;
   position: sticky;
   top: 0;
   height: 100vh;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
   z-index: 40;
   user-select: none;
 }
 
 .sidebar-clean-header {
-  padding: 22px 20px 20px;
+  padding: 18px 18px 16px;
   display: flex;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.02);
 }
 
 .sidebar-clean-nav {
   flex: 1;
-  padding: 14px 12px;
+  padding: 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   overflow-y: auto;
 }
 
@@ -57,43 +56,55 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 10px 14px;
+  padding: 9px 12px;
   border: none;
   background: transparent;
-  color: #94a3b8;
-  border-radius: 9px;
+  color: #94a3b8; /* Muted slate inactive text */
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.16s ease;
-  font-size: 0.88rem;
+  transition: all 0.15s ease;
+  font-size: 0.85rem;
   font-weight: 500;
   text-align: left;
   position: relative;
 }
 
 .clean-nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #f1f5f9;
 }
 
+/* Restrained, elegant active state: soft background + left indicator */
 .clean-nav-item.active {
-  background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+  background-color: rgba(37, 99, 235, 0.14);
   color: #ffffff;
-  font-weight: 700;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.32);
+  font-weight: 600;
+}
+
+.clean-active-indicator {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background-color: #3b82f6; /* Subtle accent indicator */
+  border-radius: 0 2px 2px 0;
 }
 
 .clean-nav-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .clean-nav-icon {
-  opacity: 0.85;
+  color: #94a3b8;
+  opacity: 0.9;
   flex-shrink: 0;
 }
 
 .clean-nav-item.active .clean-nav-icon {
+  color: #60a5fa;
   opacity: 1;
 }
 
@@ -103,20 +114,26 @@
   gap: 6px;
 }
 
-.clean-nav-badge {
-  background-color: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 12px;
+.clean-chevron {
+  color: #64748b;
+  transition: transform 0.15s ease;
 }
 
+.clean-nav-badge {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+/* Expandable child subnav */
 .clean-subnav-container {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 4px 0 6px 36px;
+  gap: 1px;
+  padding: 2px 0 4px 28px; /* Clear hierarchical indentation */
 }
 
 .clean-subnav-btn {
@@ -124,39 +141,128 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 7px 12px;
+  padding: 6px 10px;
   border: none;
   background: transparent;
   color: #94a3b8;
-  border-radius: 7px;
+  border-radius: 5px;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 500;
-  transition: all 0.15s ease;
+  transition: all 0.12s ease;
   text-align: left;
 }
 
 .clean-subnav-btn:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.04);
+  color: #f1f5f9;
 }
 
 .clean-subnav-btn.active {
-  color: #38bdf8;
-  font-weight: 700;
-  background-color: rgba(56, 189, 248, 0.1);
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.07);
+  font-weight: 600;
 }
 
 .subnav-dot {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   line-height: 0;
-  color: inherit;
+  color: #64748b;
 }
 
+.clean-subnav-btn.active .subnav-dot {
+  color: #60a5fa;
+}
+
+/* Footer user profile */
 .clean-sidebar-footer {
-  padding: 14px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.2);
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+.clean-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.clean-user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.clean-user-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.clean-user-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.clean-user-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clean-user-role {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clean-logout-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+.clean-logout-btn:hover {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+}
+
+.clean-security-tag {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+}
+
+.clean-security-tag.active {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  font-weight: 600;
 }
 
 .clean-user-badge {
@@ -405,19 +511,21 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, #4338ca 100%);
+  background-color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+  box-shadow: var(--shadow-xs);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--color-primary-hover) 0%, #3730a3 100%);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }
 
 .btn-primary:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
@@ -1455,88 +1563,100 @@
    Dashboard View Styles
    -------------------------------------------------------------------------- */
 .dashboard-welcome-banner {
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
-  border-radius: var(--radius-xl);
-  padding: 32px;
+  background-color: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: var(--radius-lg);
+  padding: 22px 26px;
   color: #ffffff;
-  margin-bottom: 28px;
-  box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.4);
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
 }
 
 .welcome-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background-color: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(8px);
-  padding: 4px 12px;
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
   font-weight: 600;
-  margin-bottom: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #cbd5e1;
+  margin-bottom: 10px;
 }
 
 .welcome-title {
-  font-size: 1.6rem;
-  font-weight: 800;
+  font-size: 1.35rem;
+  font-weight: 700;
   letter-spacing: -0.02em;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  color: #ffffff;
 }
 
 .welcome-subtitle {
-  font-size: 0.9rem;
-  color: #c7d2fe;
-  max-width: 600px;
-  line-height: 1.5;
-  margin-bottom: 20px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  max-width: 650px;
+  line-height: 1.45;
+  margin-bottom: 16px;
 }
 
 .welcome-buttons {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .dashboard-metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-bottom: 28px;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .kpi-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .kpi-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .kpi-title {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--text-muted);
 }
 
 .kpi-icon-pill {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0.9;
 }
 
-.kpi-icon-pill.indigo { background-color: #eef2ff; color: #4f46e5; }
-.kpi-icon-pill.emerald { background-color: #ecfdf5; color: #10b981; }
-.kpi-icon-pill.amber { background-color: #fffbeb; color: #f59e0b; }
-.kpi-icon-pill.sky { background-color: #f0f9ff; color: #0284c7; }
+.kpi-icon-pill.indigo { background-color: #eff6ff; color: #1e40af; }
+.kpi-icon-pill.emerald { background-color: #ecfdf5; color: #059669; }
+.kpi-icon-pill.amber { background-color: #fffbeb; color: #b45309; }
+.kpi-icon-pill.sky { background-color: #f0fdfa; color: #0f766e; }
 
 .kpi-body {
   display: flex;
@@ -1544,10 +1664,11 @@
 }
 
 .kpi-value {
-  font-size: 1.8rem;
+  font-size: 1.65rem;
   font-weight: 800;
   color: var(--text-main);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .kpi-trend {

@@ -99,8 +99,8 @@ export function Sidebar({
       {/* Brand Header */}
       <div className="sidebar-clean-header">
         <StVincentsLogo 
-          size={48} 
-          title="St. Vincent's High School" 
+          size={42} 
+          title="St. Vincent's School" 
           subtitle="Human Resource System" 
           theme="dark"
         />

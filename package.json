@@ -1,0 +1,11 @@
+{
+  "name": "school-hrms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "St. Vincent's School HRMS root deployment configuration",
+  "scripts": {
+    "install": "npm install --prefix backend",
+    "build": "npm install --prefix backend",
+    "start": "npm start --prefix backend"
+  }
+}

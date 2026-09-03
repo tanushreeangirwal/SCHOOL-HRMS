@@ -169,12 +169,13 @@ export function EmployeeDashboardView({
       <div 
         className="employee-welcome-banner" 
         style={{
-          background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%)',
+          backgroundColor: '#0f172a',
+          border: '1px solid #1e293b',
           borderRadius: 'var(--radius-lg, 12px)',
-          padding: '24px 28px',
+          padding: '22px 26px',
           color: '#ffffff',
           marginBottom: '24px',
-          boxShadow: '0 10px 25px -5px rgba(30, 58, 138, 0.25)',
+          boxShadow: 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08))',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
