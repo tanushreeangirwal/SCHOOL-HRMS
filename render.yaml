@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: school-hrms-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: https://school-hrms.vercel.app
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false

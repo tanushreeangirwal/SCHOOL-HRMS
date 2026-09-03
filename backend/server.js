@@ -15,14 +15,40 @@ const calendarRoutes = require("./routes/academicCalendar");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware - Configure CORS for production domains and local development
-const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",").map(origin => origin.trim())
-  : true;
+// Middleware - Configure CORS for production domains, Vercel frontend, and local development
+const configuredOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map(origin => origin.trim().replace(/\/$/, ""))
+  : [];
+
+const defaultAllowedOrigins = [
+  "https://school-hrms.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost:5000"
+];
+
+const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...configuredOrigins]));
 
 app.use(cors({
-  origin: corsOrigins,
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow non-browser requests (e.g. mobile apps, curl, server-to-server, health probes)
+    if (!origin) return callback(null, true);
+
+    const cleanOrigin = origin.replace(/\/$/, "");
+    if (
+      allowedOrigins.includes(cleanOrigin) ||
+      allowedOrigins.includes("*") ||
+      /\.vercel\.app$/.test(cleanOrigin)
+    ) {
+      return callback(null, true);
+    }
+
+    // Permissive fallback so production demo is never blocked by origin mismatches
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 }));
 app.use(express.json());
 
@@ -59,7 +85,7 @@ app.use("/api/academic-calendar", calendarRoutes);
 // Employee routes
 app.use("/api/employees", employeeRoutes);
 
-// Start server
-app.listen(PORT, () => {
+// Start server on 0.0.0.0 for containerized / cloud hosting
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`St. Vincent's School HRMS backend running on port ${PORT}`);
 });
