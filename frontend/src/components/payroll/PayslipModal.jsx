@@ -84,7 +84,91 @@ export function PayslipModal({ recordId, isOpen, onClose }) {
   };
 
   const handlePrint = () => {
-    window.print();
+    const printArea = document.getElementById('printable-payslip-content');
+    if (!printArea) {
+      window.print();
+      return;
+    }
+
+    // Remove any existing print iframe
+    const existingFrame = document.getElementById('payslip-print-iframe');
+    if (existingFrame) existingFrame.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'payslip-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.style.zIndex = '-9999';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map(s => s.outerHTML)
+      .join('\n');
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>St. Vincent's High School - Payslip - ${payslip?.employee_name || 'Staff'}</title>
+          <meta charset="utf-8" />
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+          ${styles}
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 10mm;
+            }
+            * {
+              box-sizing: border-box;
+            }
+            body {
+              background: #ffffff !important;
+              color: #0f172a !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              font-family: 'Plus Jakarta Sans', sans-serif !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .printable-payslip-area {
+              display: block !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="printable-payslip-area">
+            ${printArea.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (err) {
+        console.error('Print iframe error:', err);
+        window.print();
+      } finally {
+        setTimeout(() => {
+          if (iframe && iframe.parentNode) iframe.remove();
+        }, 1000);
+      }
+    }, 300);
   };
 
   if (!isOpen) return null;
@@ -151,7 +235,7 @@ export function PayslipModal({ recordId, isOpen, onClose }) {
         </div>
 
         {/* Payslip Content Body */}
-        <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }} className="printable-payslip-area">
+        <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }} className="printable-payslip-area" id="printable-payslip-content">
           {isLoading ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
               Loading institutional salary slip...
