@@ -52,12 +52,27 @@ app.use(cors({
 }));
 app.use(express.json());
 
+const pool = require("./db");
+
 // Health check
-app.get("/api/health", (req, res) => {
-  res.json({
-    success: true,
-    message: "St. Vincent's School HRMS backend is running!"
-  });
+app.get("/api/health", async (req, res) => {
+  try {
+    const dbRes = await pool.query("SELECT current_database();");
+    res.json({
+      success: true,
+      message: "St. Vincent's School HRMS backend is running!",
+      database: dbRes.rows[0].current_database,
+      db_connected: true
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed",
+      error: err.message,
+      has_database_url: Boolean(process.env.DATABASE_URL),
+      has_jwt_secret: Boolean(process.env.JWT_SECRET)
+    });
+  }
 });
 
 // Authentication routes
