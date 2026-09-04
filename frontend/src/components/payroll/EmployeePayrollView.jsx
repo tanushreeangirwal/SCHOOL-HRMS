@@ -101,7 +101,7 @@ export function EmployeePayrollView({
         border: '1px solid #e2e8f0'
       }}>
         {/* Left: Search Input */}
-        <div style={{ position: 'relative', width: '280px', minWidth: '220px' }}>
+        <div className="payroll-search-wrapper" style={{ position: 'relative', flex: '1 1 220px', minWidth: '180px' }}>
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
           <input
             type="text"
@@ -114,7 +114,7 @@ export function EmployeePayrollView({
         </div>
 
         {/* Right: Dropdown Filters */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="payroll-filters-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Month Selector */}
           <select
             className="form-control"

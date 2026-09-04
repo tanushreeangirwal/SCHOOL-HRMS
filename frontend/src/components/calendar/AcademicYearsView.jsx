@@ -136,11 +136,12 @@ export function AcademicYearsView({
       )}
 
       {/* Academic Years Table */}
-      <div style={{
+      <div className="table-responsive" style={{
         backgroundColor: '#ffffff',
         borderRadius: '14px',
         border: '1px solid #e2e8f0',
-        overflow: 'hidden',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
         boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
       }}>
         {isLoading ? (

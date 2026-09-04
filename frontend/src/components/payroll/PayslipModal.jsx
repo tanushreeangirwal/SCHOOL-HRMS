@@ -253,7 +253,7 @@ export function PayslipModal({ recordId, isOpen, onClose }) {
               backgroundColor: '#ffffff'
             }}>
               {/* Institution Header Lockup */}
-              <div style={{
+              <div className="payslip-institution-header" style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -261,7 +261,7 @@ export function PayslipModal({ recordId, isOpen, onClose }) {
                 paddingBottom: '16px',
                 marginBottom: '16px'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div className="payslip-institution-branding" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                   <StVincentsLogo size={52} theme="light" />
                   <div>
                     <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
@@ -276,7 +276,7 @@ export function PayslipModal({ recordId, isOpen, onClose }) {
                   </div>
                 </div>
 
-                <div style={{ textAlign: 'right' }}>
+                <div className="payslip-institution-meta" style={{ textAlign: 'right' }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>
                     Pay Slip
                   </span>
@@ -290,7 +290,7 @@ export function PayslipModal({ recordId, isOpen, onClose }) {
               </div>
 
               {/* Employee & Attendance Grid */}
-              <div style={{
+              <div className="payslip-emp-attendance-grid" style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '16px',
@@ -324,7 +324,7 @@ export function PayslipModal({ recordId, isOpen, onClose }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderLeft: '1px solid #e2e8f0', paddingLeft: '16px' }}>
+                <div className="payslip-attendance-col" style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderLeft: '1px solid #e2e8f0', paddingLeft: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b', fontWeight: 600 }}>Total Month Days:</span>
                     <strong style={{ color: '#0f172a' }}>{payslip.metrics?.total_days_in_month || payslip.total_working_days || 30} Days</strong>
@@ -349,7 +349,7 @@ export function PayslipModal({ recordId, isOpen, onClose }) {
               </div>
 
               {/* Earnings and Deductions Two-Column Ledger */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '20px' }}>
+              <div className="payslip-ledger-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '20px' }}>
                 {/* Earnings Table */}
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
                   <div style={{ backgroundColor: '#f1f5f9', padding: '8px 12px', fontWeight: 800, fontSize: '0.82rem', color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
