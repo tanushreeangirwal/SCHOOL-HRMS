@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { hrmsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useCalendarSync } from '../../context/CalendarSyncContext';
 
 export function AddEditEventModal({
   event = null,
@@ -24,6 +25,7 @@ export function AddEditEventModal({
   activeYearId = null
 }) {
   const { user } = useAuth();
+  const { notifyCalendarChanged } = useCalendarSync();
   const isEditing = Boolean(event && event.id);
 
   const [title, setTitle] = useState('');
@@ -33,6 +35,8 @@ export function AddEditEventModal({
   const [termId, setTermId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [description, setDescription] = useState('');
   const [isWorkingDay, setIsWorkingDay] = useState(false);
 
@@ -50,6 +54,8 @@ export function AddEditEventModal({
         setTermId(event.term_id || '');
         setStartDate(event.start_date ? event.start_date.split('T')[0] : '');
         setEndDate(event.end_date ? event.end_date.split('T')[0] : '');
+        setStartTime(event.start_time || '');
+        setEndTime(event.end_time || '');
         const rawDesc = event.description || '';
         setIncludeSaturday(rawDesc.includes('[INCLUDE_SATURDAY]') || rawDesc.includes('[INCLUDES_SATURDAY]'));
         setIncludeSunday(rawDesc.includes('[INCLUDE_SUNDAY]') || rawDesc.includes('[INCLUDES_SUNDAY]'));
@@ -64,6 +70,8 @@ export function AddEditEventModal({
         const todayStr = new Date().toISOString().split('T')[0];
         setStartDate(todayStr);
         setEndDate(todayStr);
+        setStartTime('');
+        setEndTime('');
         setDescription('');
         setIncludeSaturday(false);
         setIncludeSunday(false);
@@ -199,6 +207,8 @@ export function AddEditEventModal({
         term_id: termId || null,
         start_date: startDate,
         end_date: endDate,
+        start_time: startTime ? startTime.trim() : null,
+        end_time: endTime ? endTime.trim() : null,
         description: finalDescription ? finalDescription.trim() : null,
         is_working_day: eventType === 'Working Day Override' ? true : (eventType === 'Non-Instructional' ? isWorkingDay : false)
       };
@@ -211,6 +221,9 @@ export function AddEditEventModal({
       }
 
       if (res && res.success) {
+        if (notifyCalendarChanged) {
+          notifyCalendarChanged(isEditing ? 'UPDATE' : 'CREATE', res.data);
+        }
         if (onSaved) onSaved(res.data);
         onClose();
       } else {
@@ -446,6 +459,42 @@ export function AddEditEventModal({
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* Event Time (Optional, for exams/meetings/timed events) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '12px' }}>
+              <div>
+                <label className="apply-leave-label" htmlFor="event-start-time" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Clock size={13} style={{ color: '#64748b' }} />
+                  <span>Start Time (Optional)</span>
+                </label>
+                <input
+                  id="event-start-time"
+                  type="text"
+                  placeholder="e.g. 10:00 AM"
+                  className="form-control"
+                  value={startTime}
+                  onChange={e => setStartTime(e.target.value)}
+                  disabled={isSubmitting}
+                  style={{ fontSize: '0.85rem' }}
+                />
+              </div>
+              <div>
+                <label className="apply-leave-label" htmlFor="event-end-time" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Clock size={13} style={{ color: '#64748b' }} />
+                  <span>End Time (Optional)</span>
+                </label>
+                <input
+                  id="event-end-time"
+                  type="text"
+                  placeholder="e.g. 01:00 PM"
+                  className="form-control"
+                  value={endTime}
+                  onChange={e => setEndTime(e.target.value)}
+                  disabled={isSubmitting}
+                  style={{ fontSize: '0.85rem' }}
+                />
               </div>
             </div>
 

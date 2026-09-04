@@ -31,6 +31,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useCalendarSync } from '../../context/CalendarSyncContext';
 import { hrmsApi } from '../../services/api';
 
 export function DashboardView({ 
@@ -50,6 +51,7 @@ export function DashboardView({
   onOpen2FAModal 
 }) {
   const { user, hasPermission, isSuperAdmin, isAdmin, isHR, isManager, isEmployee } = useAuth();
+  const { calendarVersion } = useCalendarSync();
 
   // Cross-module live data states
   const [attendanceData, setAttendanceData] = useState(null);
@@ -110,6 +112,13 @@ export function DashboardView({
   useEffect(() => {
     fetchDashboardKPIs();
   }, [fetchDashboardKPIs]);
+
+  // Real-time synchronization: Re-fetch dashboard KPIs when calendar events are modified
+  useEffect(() => {
+    if (calendarVersion > 0) {
+      fetchDashboardKPIs(true);
+    }
+  }, [calendarVersion, fetchDashboardKPIs]);
 
   // Derived Workforce Stats
   const totalEmployees = employees.length;
@@ -527,7 +536,7 @@ export function DashboardView({
               <div className="kpi-trend trend-neutral" style={{ marginTop: '4px' }}>
                 <span>
                   {upcomingEvent ? (
-                    `${upcomingEvent.days_remaining > 0 ? `${upcomingEvent.days_remaining} days away` : 'Happening today'} • ${upcomingEvent.event_type || 'Event'}`
+                    `${upcomingEvent.days_remaining > 0 ? `${upcomingEvent.days_remaining} days away` : 'Happening today'}${upcomingEvent.start_time ? ` at ${upcomingEvent.start_time}` : ''} • ${upcomingEvent.category || upcomingEvent.event_type || 'Event'}`
                   ) : (
                     'Academic Term in Progress'
                   )}

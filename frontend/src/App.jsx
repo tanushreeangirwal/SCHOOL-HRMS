@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CalendarSyncProvider } from './context/CalendarSyncContext';
 import { hrmsApi } from './services/api';
 import LoginView from './components/auth/LoginView';
 import TwoFactorSetupModal from './components/auth/TwoFactorSetupModal';
@@ -1433,7 +1434,9 @@ function MainAppShell() {
 export function App() {
   return (
     <AuthProvider>
-      <MainAppShell />
+      <CalendarSyncProvider>
+        <MainAppShell />
+      </CalendarSyncProvider>
     </AuthProvider>
   );
 }

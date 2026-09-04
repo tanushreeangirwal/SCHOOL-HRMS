@@ -16,6 +16,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { hrmsApi } from '../../services/api';
+import { useCalendarSync } from '../../context/CalendarSyncContext';
 
 export function CalendarSyncModal({
   isOpen,
@@ -25,6 +26,7 @@ export function CalendarSyncModal({
   canManage = false,
   onHolidaysSynced
 }) {
+  const { notifyCalendarChanged } = useCalendarSync();
   const [activeTab, setActiveTab] = useState('feed'); // 'feed' | 'download' | 'holidays'
   const [selectedYear, setSelectedYear] = useState(activeYearId || 'ALL');
   const [selectedCategory, setSelectedCategory] = useState('ALL'); // 'ALL' | 'Exams' | 'Holidays'
@@ -74,6 +76,9 @@ export function CalendarSyncModal({
           type: 'success',
           message: res.message || 'Official holidays synchronized successfully.'
         });
+        if (notifyCalendarChanged) {
+          notifyCalendarChanged('SYNC_HOLIDAYS', res.data);
+        }
         if (onHolidaysSynced) {
           onHolidaysSynced();
         }
@@ -131,10 +136,10 @@ export function CalendarSyncModal({
             </div>
             <div>
               <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#172033', margin: 0, letterSpacing: '-0.01em' }}>
-                Calendar Sync & Live Feeds
+                External Calendar Subscriptions & Feeds
               </h2>
               <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '2px 0 0' }}>
-                Connect St. Vincent's academic schedule with Google Calendar, Outlook, and Apple Calendar.
+                Subscribe via external calendar software (Google Calendar, Outlook, Apple Calendar) or download .ICS.
               </p>
             </div>
           </div>

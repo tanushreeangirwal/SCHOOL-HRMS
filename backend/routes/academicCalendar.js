@@ -44,6 +44,98 @@ function eventAppliesToDate(ev, dateObj) {
 
 /**
  * -----------------------------------------------------------------------------
+ * REAL-TIME EVENT STREAM & SYNCHRONIZATION SYSTEM
+ * -----------------------------------------------------------------------------
+ */
+const calendarSseClients = new Set();
+
+/**
+ * Broadcasts calendar mutations in real-time to all connected HRMS clients
+ */
+function broadcastCalendarChange(action, eventData) {
+  const payload = JSON.stringify({
+    action,
+    event: eventData || null,
+    timestamp: new Date().toISOString()
+  });
+
+  for (const client of calendarSseClients) {
+    try {
+      client.write(`event: calendar_change\ndata: ${payload}\n\n`);
+    } catch (err) {
+      calendarSseClients.delete(client);
+    }
+  }
+}
+
+/**
+ * GET /api/academic-calendar/sync-status
+ * Lightweight endpoint returning last modification timestamp and total events count
+ */
+router.get('/sync-status', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        COALESCE(MAX(updated_at), '1970-01-01'::timestamp with time zone) AS last_modified,
+        COUNT(*) AS total_count
+      FROM calendar_events;
+    `);
+    const row = result.rows[0];
+    res.json({
+      success: true,
+      last_modified: row.last_modified,
+      total_count: parseInt(row.total_count, 10),
+      server_time: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Error in calendar sync-status:', err);
+    res.status(500).json({ success: false, message: 'Failed to retrieve calendar sync status.' });
+  }
+});
+
+/**
+ * GET /api/academic-calendar/stream
+ * Real-time Server-Sent Events (SSE) stream for live event propagation
+ */
+router.get('/stream', (req, res) => {
+  const token = req.query.token || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Authentication required for live calendar stream.' });
+  }
+
+  try {
+    const jwt = require('jsonwebtoken');
+    jwt.verify(token, process.env.JWT_SECRET || 'fallback_jwt_secret_svhs_2026');
+  } catch (e) {
+    return res.status(403).json({ success: false, message: 'Invalid or expired stream authentication token.' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  res.write(`data: ${JSON.stringify({ type: 'connected', time: new Date().toISOString() })}\n\n`);
+  calendarSseClients.add(res);
+
+  const keepAlive = setInterval(() => {
+    try {
+      res.write(': ping\n\n');
+    } catch (e) {
+      clearInterval(keepAlive);
+      calendarSseClients.delete(res);
+    }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    calendarSseClients.delete(res);
+  });
+});
+
+/**
+ * -----------------------------------------------------------------------------
  * 1. CALENDAR OVERVIEW & DASHBOARD METRICS
  * -----------------------------------------------------------------------------
  * GET /api/academic-calendar/overview
@@ -78,7 +170,7 @@ router.get('/overview', authenticateToken, async (req, res) => {
     // 3. Get Upcoming Holiday / School Closure
     const upcomingHolidayRes = await pool.query(`
       SELECT 
-        id, title, event_type, category, start_date, end_date, total_days, description,
+        id, title, event_type, category, start_date, end_date, start_time, end_time, total_days, description,
         (start_date - $1::date) AS days_remaining
       FROM calendar_events
       WHERE end_date >= $1::date
@@ -164,7 +256,7 @@ router.get('/overview', authenticateToken, async (req, res) => {
     // 6. Next 5 Upcoming Events
     const nextEventsRes = await pool.query(`
       SELECT 
-        id, title, event_type, category, start_date, end_date, total_days, description,
+        id, title, event_type, category, start_date, end_date, start_time, end_time, total_days, description,
         (start_date - $1::date) AS days_remaining
       FROM calendar_events
       WHERE end_date >= $1::date AND is_active = true
@@ -869,6 +961,8 @@ router.post('/events', authenticateToken, requirePermission('calendar:manage'), 
     category,
     start_date,
     end_date,
+    start_time,
+    end_time,
     description,
     is_working_day
   } = req.body;
@@ -928,9 +1022,9 @@ router.post('/events', authenticateToken, requirePermission('calendar:manage'), 
     const insertRes = await pool.query(`
       INSERT INTO calendar_events (
         academic_year_id, term_id, title, event_type, category,
-        start_date, end_date, total_days, description, is_working_day, is_active, created_by
+        start_date, end_date, start_time, end_time, total_days, description, is_working_day, is_active, created_by, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true, $13, CURRENT_TIMESTAMP)
       RETURNING *;
     `, [
       yearId,
@@ -940,13 +1034,20 @@ router.post('/events', authenticateToken, requirePermission('calendar:manage'), 
       category ? category.trim() : (event_type === 'Holiday' ? 'Public Holiday' : 'School Event'),
       start_date,
       end_date,
+      start_time ? start_time.trim() : null,
+      end_time ? end_time.trim() : null,
       totalDays,
       description ? description.trim() : null,
       isWorking,
       req.user.id
     ]);
 
-    res.status(201).json({ success: true, message: 'Calendar event created successfully.', data: insertRes.rows[0] });
+    const createdEvent = insertRes.rows[0];
+
+    // Real-time propagation to all connected HRMS clients
+    broadcastCalendarChange('CREATE', createdEvent);
+
+    res.status(201).json({ success: true, message: 'Calendar event created successfully.', data: createdEvent });
   } catch (error) {
     console.error('Error creating calendar event:', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to create calendar event.' });
@@ -964,6 +1065,8 @@ router.put('/events/:id', authenticateToken, requirePermission('calendar:manage'
     category,
     start_date,
     end_date,
+    start_time,
+    end_time,
     description,
     is_working_day,
     is_active
@@ -1014,12 +1117,14 @@ router.put('/events/:id', authenticateToken, requirePermission('calendar:manage'
           category = COALESCE($5, category),
           start_date = $6,
           end_date = $7,
-          total_days = $8,
-          description = $9,
-          is_working_day = $10,
-          is_active = COALESCE($11, is_active),
+          start_time = $8,
+          end_time = $9,
+          total_days = $10,
+          description = $11,
+          is_working_day = $12,
+          is_active = COALESCE($13, is_active),
           updated_at = CURRENT_TIMESTAMP
-      WHERE id = $12
+      WHERE id = $14
       RETURNING *;
     `, [
       academic_year_id,
@@ -1029,6 +1134,8 @@ router.put('/events/:id', authenticateToken, requirePermission('calendar:manage'
       category ? category.trim() : null,
       start_date,
       end_date,
+      start_time !== undefined ? (start_time ? start_time.trim() : null) : null,
+      end_time !== undefined ? (end_time ? end_time.trim() : null) : null,
       totalDays,
       description ? description.trim() : null,
       isWorking,
@@ -1040,7 +1147,12 @@ router.put('/events/:id', authenticateToken, requirePermission('calendar:manage'
       return res.status(404).json({ success: false, message: 'Calendar event not found.' });
     }
 
-    res.json({ success: true, message: 'Calendar event updated successfully.', data: updateRes.rows[0] });
+    const updatedEvent = updateRes.rows[0];
+
+    // Real-time propagation to all connected HRMS clients
+    broadcastCalendarChange('UPDATE', updatedEvent);
+
+    res.json({ success: true, message: 'Calendar event updated successfully.', data: updatedEvent });
   } catch (error) {
     console.error('Error updating calendar event:', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to update calendar event.' });
@@ -1062,7 +1174,13 @@ router.patch('/events/:id/status', authenticateToken, requirePermission('calenda
     if (updateRes.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Calendar event not found.' });
     }
-    res.json({ success: true, message: 'Calendar event status updated.', data: updateRes.rows[0] });
+
+    const event = updateRes.rows[0];
+
+    // Real-time propagation (CANCEL / ACTIVATE)
+    broadcastCalendarChange(Boolean(is_active) ? 'ACTIVATE' : 'CANCEL', event);
+
+    res.json({ success: true, message: 'Calendar event status updated.', data: event });
   } catch (error) {
     console.error('Error toggling event status:', error);
     res.status(500).json({ success: false, message: 'Failed to update event status.' });
@@ -1073,8 +1191,15 @@ router.patch('/events/:id/status', authenticateToken, requirePermission('calenda
 router.delete('/events/:id', authenticateToken, requirePermission('calendar:manage'), async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query("DELETE FROM calendar_events WHERE id = $1;", [id]);
-    res.json({ success: true, message: 'Calendar event deleted successfully.' });
+    const deletedRes = await pool.query("DELETE FROM calendar_events WHERE id = $1 RETURNING id, title, start_date;", [id]);
+    if (deletedRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Calendar event not found or already deleted.' });
+    }
+
+    // Real-time propagation (DELETE)
+    broadcastCalendarChange('DELETE', { id, title: deletedRes.rows[0].title });
+
+    res.json({ success: true, message: 'Calendar event deleted successfully.', data: { id } });
   } catch (error) {
     console.error('Error deleting event:', error);
     res.status(500).json({ success: false, message: 'Failed to delete event.' });
@@ -1346,6 +1471,10 @@ router.post('/sync-official-holidays', authenticateToken, requirePermission('cal
         ]);
         insertedCount++;
       }
+    }
+
+    if (insertedCount > 0) {
+      broadcastCalendarChange('SYNC_HOLIDAYS', { inserted_count: insertedCount, academic_year_id: yearId });
     }
 
     res.json({

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { hrmsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useCalendarSync } from '../../context/CalendarSyncContext';
 import { TableSkeleton, LoadingSpinner } from '../common/LoadingSpinner';
 import DayDetailModal from './DayDetailModal';
 
@@ -31,6 +32,7 @@ export function CalendarOverviewView({
   canManage = false
 }) {
   const { user } = useAuth();
+  const { calendarVersion } = useCalendarSync();
 
   const [overviewData, setOverviewData] = useState(null);
   const [monthData, setMonthData] = useState(null);
@@ -75,6 +77,13 @@ export function CalendarOverviewView({
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Real-time synchronization: Re-fetch whenever calendarVersion changes across the HRMS
+  useEffect(() => {
+    if (calendarVersion > 0) {
+      fetchData(true);
+    }
+  }, [calendarVersion, fetchData]);
 
   // Month navigation
   const handlePrevMonth = () => {
@@ -621,7 +630,7 @@ export function CalendarOverviewView({
                       }}>
                         {ev.title}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
                         <span style={{
                           fontSize: '0.68rem',
                           fontWeight: 700,
@@ -632,6 +641,12 @@ export function CalendarOverviewView({
                         }}>
                           {ev.category || ev.event_type}
                         </span>
+                        {ev.start_time && (
+                          <span style={{ fontSize: '0.72rem', color: '#1e293b', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <Clock size={11} style={{ color: '#64748b' }} />
+                            {ev.start_time}{ev.end_time ? ` – ${ev.end_time}` : ''}
+                          </span>
+                        )}
                         <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
                           {daysLabel}
                         </span>

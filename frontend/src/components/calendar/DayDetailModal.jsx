@@ -180,8 +180,14 @@ export function DayDetailModal({
                         </span>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px', fontSize: '0.78rem', color: '#64748b' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px', fontSize: '0.78rem', color: '#64748b', flexWrap: 'wrap' }}>
                         <span>Category: <strong>{ev.category || 'Public Holiday'}</strong></span>
+                        {ev.start_time && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#1e293b', fontWeight: 600 }}>
+                            <Clock size={12} style={{ color: '#64748b' }} />
+                            {ev.start_time}{ev.end_time ? ` – ${ev.end_time}` : ''}
+                          </span>
+                        )}
                         {ev.total_days > 1 && (
                           <span>Duration: <strong>{ev.total_days} Days</strong></span>
                         )}

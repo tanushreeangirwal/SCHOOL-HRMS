@@ -828,7 +828,17 @@ export const hrmsApi = {
   getCalendarExportUrl(academicYearId = 'ALL', category = 'ALL') {
     const token = localStorage.getItem('token') || '';
     const base = API_BASE_URL.replace(/\/$/, '');
-    return `${base}/academic-calendar/feed.ics?token=${encodeURIComponent(token)}&academic_year_id=${academicYearId}&category=${category}`;
+    return `${base}/academic-calendar/export/ical?token=${encodeURIComponent(token)}&academic_year_id=${academicYearId}&category=${category}`;
+  },
+
+  async getCalendarSyncStatus() {
+    return request('/academic-calendar/sync-status');
+  },
+
+  getCalendarStreamUrl() {
+    const token = localStorage.getItem('token') || '';
+    const base = API_BASE_URL.replace(/\/$/, '');
+    return `${base}/academic-calendar/stream?token=${encodeURIComponent(token)}`;
   },
 
   // =========================================================================

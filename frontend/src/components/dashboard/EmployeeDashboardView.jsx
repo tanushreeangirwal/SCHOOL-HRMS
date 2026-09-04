@@ -22,6 +22,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useCalendarSync } from '../../context/CalendarSyncContext';
 import { hrmsApi } from '../../services/api';
 import { StaffAvatar } from '../common/StaffAvatar';
 
@@ -33,6 +34,7 @@ export function EmployeeDashboardView({
   onNavigateToCalendar
 }) {
   const { user } = useAuth();
+  const { calendarVersion } = useCalendarSync();
 
   const [todayData, setTodayData] = useState(null);
   const [monthlySummary, setMonthlySummary] = useState(null);
@@ -114,6 +116,13 @@ export function EmployeeDashboardView({
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  // Real-time synchronization: Refresh teacher/employee dashboard when calendar events update
+  useEffect(() => {
+    if (calendarVersion > 0) {
+      fetchDashboardData(true);
+    }
+  }, [calendarVersion, fetchDashboardData]);
 
   // Handle Self Check-In
   const handleCheckIn = async () => {
@@ -424,7 +433,7 @@ export function EmployeeDashboardView({
             <div className="kpi-trend trend-neutral" style={{ marginTop: '4px' }}>
               <span>
                 {upcomingSchoolEvent ? (
-                  `${upcomingSchoolEvent.days_remaining > 0 ? `${upcomingSchoolEvent.days_remaining} days away` : 'Today'} • ${upcomingSchoolEvent.event_type || 'Event'}`
+                  `${upcomingSchoolEvent.days_remaining > 0 ? `${upcomingSchoolEvent.days_remaining} days away` : 'Today'}${upcomingSchoolEvent.start_time ? ` at ${upcomingSchoolEvent.start_time}` : ''} • ${upcomingSchoolEvent.category || upcomingSchoolEvent.event_type || 'Event'}`
                 ) : (
                   activeTerm
                 )}

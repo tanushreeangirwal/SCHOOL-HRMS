@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { hrmsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useCalendarSync } from '../../context/CalendarSyncContext';
 import CalendarOverviewView from './CalendarOverviewView';
 import AcademicYearsView from './AcademicYearsView';
 import TermsView from './TermsView';
@@ -22,6 +23,7 @@ export function AcademicCalendarModule({ initialTab = 'overview' }) {
   const { user, isSuperAdmin, isAdmin, isHR, isManager, isEmployee } = useAuth();
   const canManage = isSuperAdmin || isAdmin || isHR;
   const canManageYears = isSuperAdmin || isAdmin;
+  const { isLiveConnected, calendarVersion } = useCalendarSync();
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [academicYears, setAcademicYears] = useState([]);
@@ -68,6 +70,13 @@ export function AcademicCalendarModule({ initialTab = 'overview' }) {
   useEffect(() => {
     fetchMasterData();
   }, [fetchMasterData]);
+
+  // Real-time synchronization: Refresh master data on calendar changes
+  useEffect(() => {
+    if (calendarVersion > 0) {
+      fetchMasterData(true);
+    }
+  }, [calendarVersion, fetchMasterData]);
 
   const activeYear = academicYears.find(y => y.is_active) || academicYears[0];
   const activeYearId = activeYear?.id || null;
@@ -141,15 +150,39 @@ export function AcademicCalendarModule({ initialTab = 'overview' }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Real-time HRMS Live Sync Indicator */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 11px',
+            borderRadius: '16px',
+            backgroundColor: isLiveConnected ? '#ecfdf5' : '#f8fafc',
+            border: `1px solid ${isLiveConnected ? '#a7f3d0' : '#e2e8f0'}`,
+            fontSize: '0.74rem',
+            fontWeight: 700,
+            color: isLiveConnected ? '#065f46' : '#64748b'
+          }} title={isLiveConnected ? 'Connected to live academic calendar event stream' : 'Checking for live calendar updates'}>
+            <span style={{
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              backgroundColor: isLiveConnected ? '#10b981' : '#94a3b8',
+              boxShadow: isLiveConnected ? '0 0 0 3px rgba(16, 185, 129, 0.25)' : 'none'
+            }} />
+            <span>{isLiveConnected ? 'HRMS Live Sync Active' : 'HRMS Calendar'}</span>
+          </div>
+
+          {/* External Calendar Subscriptions (iCal, Google, Outlook, Apple) */}
           <button
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={() => setIsSyncModalOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#3155D9', fontWeight: 600 }}
-            title="Subscribe via Google Calendar, Apple Calendar, or Outlook"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontWeight: 600 }}
+            title="External Subscriptions (Google Calendar, Apple Calendar, Outlook, .ICS download)"
           >
             <RefreshCw size={14} />
-            <span>Sync with Real Calendars</span>
+            <span>External Calendar Feeds</span>
           </button>
 
           {canManage && (

@@ -12,9 +12,11 @@ import {
   AlertCircle, 
   Check, 
   Layers,
-  Sparkles
+  Sparkles,
+  Clock
 } from 'lucide-react';
 import { hrmsApi } from '../../services/api';
+import { useCalendarSync } from '../../context/CalendarSyncContext';
 import { TableSkeleton } from '../common/LoadingSpinner';
 import AddEditEventModal from './AddEditEventModal';
 
@@ -25,6 +27,7 @@ export function HolidaysView({
   canManage = false,
   initialEvent = null
 }) {
+  const { calendarVersion, notifyCalendarChanged } = useCalendarSync();
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -71,11 +74,21 @@ export function HolidaysView({
     fetchEvents();
   }, [fetchEvents]);
 
+  // Real-time synchronization: Re-fetch whenever calendarVersion changes across the HRMS
+  useEffect(() => {
+    if (calendarVersion > 0) {
+      fetchEvents(true);
+    }
+  }, [calendarVersion, fetchEvents]);
+
   const handleToggleStatus = async (ev) => {
     setActionLoading(ev.id);
     try {
       const res = await hrmsApi.toggleCalendarEventStatus(ev.id, !ev.is_active);
       if (res && res.success) {
+        if (notifyCalendarChanged) {
+          notifyCalendarChanged(!ev.is_active ? 'ACTIVATE' : 'CANCEL', { id: ev.id, is_active: !ev.is_active });
+        }
         fetchEvents(true);
       }
     } catch (err) {
@@ -94,6 +107,9 @@ export function HolidaysView({
       const res = await hrmsApi.deleteCalendarEvent(ev.id);
       if (res && res.success) {
         setFeedback({ type: 'success', message: 'Event deleted successfully.' });
+        if (notifyCalendarChanged) {
+          notifyCalendarChanged('DELETE', { id: ev.id });
+        }
         fetchEvents(true);
       }
     } catch (err) {
@@ -442,6 +458,20 @@ export function HolidaysView({
                       }}>
                         {ev.total_days} {ev.total_days === 1 ? 'Day' : 'Days'}
                       </span>
+                      {ev.start_time && (
+                        <div style={{
+                          fontSize: '0.74rem',
+                          fontWeight: 600,
+                          color: '#1e293b',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          marginTop: '4px'
+                        }}>
+                          <Clock size={11} style={{ color: '#64748b' }} />
+                          <span>{ev.start_time}{ev.end_time ? ` – ${ev.end_time}` : ''}</span>
+                        </div>
+                      )}
                     </td>
 
                     <td style={{ padding: '14px 16px' }}>
