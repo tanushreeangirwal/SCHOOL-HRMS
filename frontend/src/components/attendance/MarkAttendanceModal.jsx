@@ -87,6 +87,21 @@ export function MarkAttendanceModal({
     }
   };
 
+  // Quick fill with current live clock time
+  const handleFillCurrentTimeForIn = () => {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    setCheckInTime(`${hh}:${mm}`);
+  };
+
+  const handleFillCurrentTimeForOut = () => {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    setCheckOutTime(`${hh}:${mm}`);
+  };
+
   const validateForm = () => {
     const errors = {};
     if (!selectedEmployeeId) {
@@ -327,9 +342,20 @@ export function MarkAttendanceModal({
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" htmlFor="check-in-input">
-                    Check-In Time
-                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label className="form-label" htmlFor="check-in-input" style={{ margin: 0 }}>
+                      Check-In Time
+                    </label>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs"
+                      onClick={handleFillCurrentTimeForIn}
+                      style={{ fontSize: '0.72rem', color: '#2563eb', padding: '0 4px', textDecoration: 'underline' }}
+                      title="Set to current live clock time"
+                    >
+                      Now
+                    </button>
+                  </div>
                   <input
                     type="time"
                     id="check-in-input"
@@ -344,9 +370,20 @@ export function MarkAttendanceModal({
                 </div>
 
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" htmlFor="check-out-input">
-                    Check-Out Time
-                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label className="form-label" htmlFor="check-out-input" style={{ margin: 0 }}>
+                      Check-Out Time
+                    </label>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs"
+                      onClick={handleFillCurrentTimeForOut}
+                      style={{ fontSize: '0.72rem', color: '#2563eb', padding: '0 4px', textDecoration: 'underline' }}
+                      title="Set to current live clock time"
+                    >
+                      Now
+                    </button>
+                  </div>
                   <input
                     type="time"
                     id="check-out-input"

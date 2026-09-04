@@ -22,4 +22,11 @@ const poolConfig = process.env.DATABASE_URL
 
 const pool = new Pool(poolConfig);
 
+// Synchronize database session timezone with the school campus timezone
+pool.on('connect', (client) => {
+  client.query("SET timezone = 'Asia/Kolkata';").catch(err => {
+    console.error('Error setting timezone on database client connection:', err.message);
+  });
+});
+
 module.exports = pool;

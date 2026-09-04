@@ -3,6 +3,42 @@ const router = express.Router();
 const pool = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
+const SCHOOL_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Kolkata';
+
+/**
+ * Returns today's date in YYYY-MM-DD format for the school campus timezone
+ */
+function getSchoolTodayDate() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: SCHOOL_TIMEZONE }).format(new Date());
+}
+
+/**
+ * Returns current time in HH:MM format for the school campus timezone
+ */
+function getSchoolCurrentTimeStr() {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: SCHOOL_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(new Date());
+}
+
+/**
+ * Formats a Date/timestamp into 12-hour school time (e.g. "10:30 AM") in school timezone
+ */
+function formatSchoolTime(dateVal) {
+  if (!dateVal) return null;
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: SCHOOL_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).format(d);
+}
+
 /**
  * Helper to calculate minutes difference between two HH:MM or ISO timestamp strings
  */
@@ -50,7 +86,7 @@ function formatWorkingHours(checkIn, checkOut) {
 // ============================================================================
 router.get('/dashboard', authenticateToken, async (req, res) => {
   try {
-    const targetDate = req.query.date || new Date().toISOString().split('T')[0];
+    const targetDate = req.query.date || getSchoolTodayDate();
 
     // Fetch active employees with their attendance on targetDate
     const result = await pool.query(`
@@ -144,7 +180,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 router.get('/daily', authenticateToken, async (req, res) => {
   try {
     const { date, department_id, shift_id, status, search } = req.query;
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    const targetDate = date || getSchoolTodayDate();
 
     let query = `
       SELECT 
@@ -163,13 +199,15 @@ router.get('/daily', authenticateToken, async (req, res) => {
         s.end_time as shift_end_time,
         s.late_grace_minutes,
         ar.id as attendance_id,
-        COALESCE(ar.status, 'Not Marked') as status,
+        ar.attendance_date,
         ar.check_in,
         ar.check_out,
+        ar.status,
         ar.late_minutes,
         ar.early_departure_minutes,
+        ar.overtime_minutes,
         ar.remarks,
-        ar.updated_at as last_updated
+        ar.source
       FROM employees e
       LEFT JOIN departments d ON e.department_id = d.id
       LEFT JOIN designations des ON e.designation_id = des.id
@@ -225,8 +263,8 @@ router.get('/daily', authenticateToken, async (req, res) => {
       employee_name: `${r.first_name} ${r.last_name || ''}`.trim(),
       shift_start_formatted: r.shift_start_time ? r.shift_start_time.slice(0, 5) : '—',
       shift_end_formatted: r.shift_end_time ? r.shift_end_time.slice(0, 5) : '—',
-      check_in_time_formatted: r.check_in ? new Date(r.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—',
-      check_out_time_formatted: r.check_out ? new Date(r.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—',
+      check_in_time_formatted: r.check_in ? formatSchoolTime(r.check_in) : '—',
+      check_out_time_formatted: r.check_out ? formatSchoolTime(r.check_out) : '—',
       working_hours_formatted: formatWorkingHours(r.check_in, r.check_out)
     }));
 
@@ -1057,11 +1095,9 @@ router.get('/my-today', authenticateToken, async (req, res) => {
       }
     }
 
-    // Determine today's date & day name
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const currentDayName = dayNames[now.getDay()];
+    // Determine today's date & day name in school campus timezone
+    const todayStr = getSchoolTodayDate();
+    const currentDayName = new Intl.DateTimeFormat('en-US', { timeZone: SCHOOL_TIMEZONE, weekday: 'long' }).format(new Date());
     const isWorkingDay = workingDays.includes(currentDayName);
 
     // Query today's attendance record
@@ -1101,8 +1137,8 @@ router.get('/my-today', authenticateToken, async (req, res) => {
 
     const formattedRecord = record ? {
       ...record,
-      check_in_formatted: record.check_in ? new Date(record.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : null,
-      check_out_formatted: record.check_out ? new Date(record.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : null,
+      check_in_formatted: record.check_in ? formatSchoolTime(record.check_in) : null,
+      check_out_formatted: record.check_out ? formatSchoolTime(record.check_out) : null,
       working_hours: workingHours
     } : null;
 
@@ -1137,7 +1173,9 @@ router.get('/my-today', authenticateToken, async (req, res) => {
         day_name: currentDayName,
         is_working_day: isWorkingDay,
         state,
-        attendance: formattedRecord
+        attendance: formattedRecord,
+        school_timezone: SCHOOL_TIMEZONE,
+        server_now: new Date().toISOString()
       }
     });
   } catch (err) {
@@ -1159,8 +1197,8 @@ router.post('/check-in', authenticateToken, async (req, res) => {
       });
     }
 
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = getSchoolTodayDate();
+    const currentDayName = new Intl.DateTimeFormat('en-US', { timeZone: SCHOOL_TIMEZONE, weekday: 'long' }).format(new Date());
 
     // 1. Fetch employee & assigned shift
     const empRes = await pool.query(`
@@ -1195,9 +1233,6 @@ router.post('/check-in', authenticateToken, async (req, res) => {
       }
     }
 
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const currentDayName = dayNames[now.getDay()];
-
     if (!workingDays.includes(currentDayName)) {
       return res.status(400).json({
         success: false,
@@ -1214,7 +1249,7 @@ router.post('/check-in', authenticateToken, async (req, res) => {
     if (existing.rows.length > 0) {
       const rec = existing.rows[0];
       const checkInFormatted = rec.check_in 
-        ? new Date(rec.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+        ? formatSchoolTime(rec.check_in)
         : 'earlier';
       return res.status(409).json({
         success: false,
@@ -1222,12 +1257,12 @@ router.post('/check-in', authenticateToken, async (req, res) => {
       });
     }
 
-    // 4. Calculate Status (Present vs Late)
+    // 4. Calculate Status (Present vs Late) in school campus timezone
     let status = 'Present';
     let lateMinutes = 0;
 
     const sStart = emp.start_time ? emp.start_time.slice(0, 5) : '07:30';
-    const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const currentTimeStr = getSchoolCurrentTimeStr();
     const graceMinutes = emp.late_grace_minutes || 15;
 
     const diff = calculateMinutesLate(currentTimeStr, sStart);
@@ -1246,15 +1281,16 @@ router.post('/check-in', authenticateToken, async (req, res) => {
     `, [employeeId, emp.current_shift_id, todayStr, status, lateMinutes]);
 
     const created = insertRes.rows[0];
+    const formattedCheckIn = formatSchoolTime(created.check_in);
 
     return res.json({
       success: true,
-      message: `Checked in successfully at ${new Date(created.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}. Status: ${status}.`,
+      message: `Checked in successfully at ${formattedCheckIn}. Status: ${status}.`,
       data: {
         id: created.id,
         attendance_date: created.attendance_date,
         check_in: created.check_in,
-        check_in_formatted: new Date(created.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+        check_in_formatted: formattedCheckIn,
         status: created.status,
         late_minutes: created.late_minutes,
         source: created.source
@@ -1279,7 +1315,7 @@ router.post('/check-out', authenticateToken, async (req, res) => {
       });
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getSchoolTodayDate();
 
     // Find today's attendance record
     const recordRes = await pool.query(
@@ -1296,7 +1332,7 @@ router.post('/check-out', authenticateToken, async (req, res) => {
 
     const record = recordRes.rows[0];
     if (record.check_out) {
-      const checkOutFormatted = new Date(record.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      const checkOutFormatted = formatSchoolTime(record.check_out);
       return res.status(409).json({
         success: false,
         message: `Your attendance for today is already completed (Checked out at ${checkOutFormatted}).`
@@ -1313,17 +1349,19 @@ router.post('/check-out', authenticateToken, async (req, res) => {
 
     const updated = updateRes.rows[0];
     const workingHours = formatWorkingHours(updated.check_in, updated.check_out);
+    const formattedCheckIn = formatSchoolTime(updated.check_in);
+    const formattedCheckOut = formatSchoolTime(updated.check_out);
 
     return res.json({
       success: true,
-      message: `Checked out successfully at ${new Date(updated.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}. Total working hours: ${workingHours}.`,
+      message: `Checked out successfully at ${formattedCheckOut}. Total working hours: ${workingHours}.`,
       data: {
         id: updated.id,
         attendance_date: updated.attendance_date,
         check_in: updated.check_in,
         check_out: updated.check_out,
-        check_in_formatted: new Date(updated.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
-        check_out_formatted: new Date(updated.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+        check_in_formatted: formattedCheckIn,
+        check_out_formatted: formattedCheckOut,
         working_hours: workingHours,
         status: updated.status
       }
@@ -1344,7 +1382,7 @@ router.get('/my-summary', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'No linked employee profile found.' });
     }
 
-    const currentMonth = req.query.month || new Date().toISOString().slice(0, 7);
+    const currentMonth = req.query.month || getSchoolTodayDate().slice(0, 7);
 
     // Fetch employee details
     const empRes = await pool.query(`
@@ -1409,8 +1447,8 @@ router.get('/my-summary', authenticateToken, async (req, res) => {
     const history = attRes.rows.map(r => ({
       ...r,
       date_formatted: new Date(r.attendance_date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }),
-      check_in_formatted: r.check_in ? new Date(r.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—',
-      check_out_formatted: r.check_out ? new Date(r.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—',
+      check_in_formatted: formatSchoolTime(r.check_in),
+      check_out_formatted: formatSchoolTime(r.check_out),
       working_hours_formatted: formatWorkingHours(r.check_in, r.check_out)
     }));
 

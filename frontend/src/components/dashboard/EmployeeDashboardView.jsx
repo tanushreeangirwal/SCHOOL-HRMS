@@ -49,11 +49,23 @@ export function EmployeeDashboardView({
 
   // Live Digital Clock
   const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [elapsedDuration, setElapsedDuration] = useState('00h 00m 00s');
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const formatDashboardTime = (rawTime, fallback) => {
+    if (!rawTime && !fallback) return '—';
+    if (rawTime) {
+      const d = new Date(rawTime);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      }
+    }
+    return fallback || '—';
+  };
 
   const fetchDashboardData = useCallback(async (isSilent = false) => {
     if (!isSilent) setIsLoading(true);
@@ -169,6 +181,25 @@ export function EmployeeDashboardView({
   const state = todayData?.state || 'NOT_MARKED';
   const attendance = todayData?.attendance || null;
   const isWorkingDay = todayData?.is_working_day !== false;
+
+  // Live shift running duration stopwatch
+  useEffect(() => {
+    if (state === 'CHECKED_IN' && attendance?.check_in) {
+      const updateTimer = () => {
+        const checkInMs = new Date(attendance.check_in).getTime();
+        const nowMs = new Date().getTime();
+        const diffMs = Math.max(0, nowMs - checkInMs);
+        const totalSec = Math.floor(diffMs / 1000);
+        const hrs = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+        const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+        const secs = String(totalSec % 60).padStart(2, '0');
+        setElapsedDuration(`${hrs}h ${mins}m ${secs}s`);
+      };
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [state, attendance?.check_in]);
 
   const currentHour = currentTime.getHours();
   const greeting = currentHour < 12 ? 'Good Morning' : currentHour < 17 ? 'Good Afternoon' : 'Good Evening';
@@ -311,7 +342,7 @@ export function EmployeeDashboardView({
             </span>
             <div className="kpi-trend trend-positive" style={{ marginTop: '4px' }}>
               <span>
-                {attendance?.check_in ? `In: ${new Date(attendance.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : `Shift: ${shift.start_time_formatted}`}
+                {attendance?.check_in ? `In: ${formatDashboardTime(attendance.check_in, attendance.check_in_formatted)}` : `Shift: ${shift.start_time_formatted}`}
                 {attendance?.working_hours && ` • ${attendance.working_hours}`}
               </span>
             </div>
@@ -479,9 +510,9 @@ export function EmployeeDashboardView({
                   disabled={isCheckingIn}
                   style={{
                     width: '100%',
-                    maxWidth: '320px',
+                    maxWidth: '360px',
                     padding: '14px 24px',
-                    fontSize: '1rem',
+                    fontSize: '0.98rem',
                     fontWeight: 800,
                     margin: '0 auto',
                     display: 'inline-flex',
@@ -500,7 +531,7 @@ export function EmployeeDashboardView({
                   ) : (
                     <>
                       <CheckCircle2 size={18} />
-                      <span>Mark Morning Check-In</span>
+                      <span>Mark Check-In • {formattedLiveClock}</span>
                     </>
                   )}
                 </button>
@@ -509,20 +540,26 @@ export function EmployeeDashboardView({
               <div>
                 <div style={{ marginBottom: '16px' }}>
                   <span className="status-pill status-active" style={{ fontSize: '0.82rem', padding: '4px 12px' }}>
-                    <span className="status-dot" style={{ backgroundColor: '#10b981' }}></span>
-                    <span>Status: Checked In</span>
+                    <span className="status-dot" style={{ backgroundColor: '#10b981', animation: 'pulse 2s infinite' }}></span>
+                    <span>Status: On Duty (Checked In)</span>
                   </span>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginTop: '14px', flexWrap: 'wrap' }}>
                     <div>
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Check-In Time</span>
-                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#10b981' }}>
-                        {attendance?.check_in ? new Date(attendance.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10b981' }}>
+                        {formatDashboardTime(attendance?.check_in, attendance?.check_in_formatted)}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Active Shift</span>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#3b82f6', fontFamily: 'monospace' }}>
+                        {elapsedDuration}
                       </div>
                     </div>
                     {attendance?.late_minutes > 0 && (
                       <div>
                         <span style={{ fontSize: '0.72rem', color: '#f59e0b', textTransform: 'uppercase', fontWeight: 600 }}>Late Arrival</span>
-                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f59e0b' }}>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f59e0b' }}>
                           +{attendance.late_minutes}m
                         </div>
                       </div>
@@ -537,7 +574,7 @@ export function EmployeeDashboardView({
                   disabled={isCheckingOut}
                   style={{
                     width: '100%',
-                    maxWidth: '320px',
+                    maxWidth: '360px',
                     padding: '12px 24px',
                     fontSize: '0.92rem',
                     fontWeight: 700,
@@ -557,20 +594,22 @@ export function EmployeeDashboardView({
                   ) : (
                     <>
                       <Clock size={16} />
-                      <span>Record End of Shift Check-Out</span>
+                      <span>Record Check-Out • {formattedLiveClock}</span>
                     </>
                   )}
                 </button>
               </div>
             ) : state === 'CHECKED_OUT' ? (
-              <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '20px 16px' }}>
+              <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px', padding: '20px 16px' }}>
                 <CheckCircle2 size={32} style={{ color: '#059669', margin: '0 auto 8px' }} />
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#065f46', margin: '0 0 4px 0' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#065f46', margin: '0 0 8px 0' }}>
                   Daily Shift Completed
                 </h3>
-                <p style={{ fontSize: '0.84rem', color: '#047857', margin: 0 }}>
-                  Working Hours: <strong>{attendance?.working_hours || 'Complete'}</strong>
-                </p>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '0.86rem', color: '#047857', flexWrap: 'wrap' }}>
+                  <span>In: <strong>{formatDashboardTime(attendance?.check_in, attendance?.check_in_formatted)}</strong></span>
+                  <span>Out: <strong>{formatDashboardTime(attendance?.check_out, attendance?.check_out_formatted)}</strong></span>
+                  <span>Duration: <strong>{attendance?.working_hours || 'Complete'}</strong></span>
+                </div>
               </div>
             ) : (
               <div style={{ backgroundColor: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '8px', padding: '20px 16px' }}>

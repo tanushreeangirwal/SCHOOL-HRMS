@@ -36,6 +36,19 @@ export function MarkAttendanceView({
   const [error, setError] = useState(null);
   const [actionSuccess, setActionSuccess] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [elapsedDuration, setElapsedDuration] = useState('00h 00m 00s');
+
+  // Format time with user's browser clock and fallback to server string
+  const formatTimeDisplay = useCallback((rawTime, fallback) => {
+    if (!rawTime && !fallback) return '—';
+    if (rawTime) {
+      const d = new Date(rawTime);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      }
+    }
+    return fallback || '—';
+  }, []);
 
   // Edit / Re-mark Attendance state for completed records
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -181,6 +194,25 @@ export function MarkAttendanceView({
       setIsUpdating(false);
     }
   };
+
+  // Live shift running duration stopwatch
+  useEffect(() => {
+    if (state === 'CHECKED_IN' && attendance?.check_in) {
+      const updateTimer = () => {
+        const checkInMs = new Date(attendance.check_in).getTime();
+        const nowMs = new Date().getTime();
+        const diffMs = Math.max(0, nowMs - checkInMs);
+        const totalSec = Math.floor(diffMs / 1000);
+        const hrs = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+        const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+        const secs = String(totalSec % 60).padStart(2, '0');
+        setElapsedDuration(`${hrs}h ${mins}m ${secs}s`);
+      };
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [state, attendance?.check_in]);
 
   const employee = todayData?.employee || {
     first_name: user?.first_name || 'Staff',
@@ -397,13 +429,13 @@ export function MarkAttendanceView({
                   disabled={isCheckingIn}
                   style={{
                     width: '100%',
-                    maxWidth: '340px',
-                    height: '54px',
+                    maxWidth: '360px',
+                    height: '56px',
                     fontSize: '1.05rem',
                     fontWeight: 800,
-                    borderRadius: '10px',
-                    letterSpacing: '0.04em',
-                    boxShadow: '0 4px 14px 0 rgba(49, 85, 217, 0.3)',
+                    borderRadius: '12px',
+                    letterSpacing: '0.03em',
+                    boxShadow: '0 4px 16px 0 rgba(49, 85, 217, 0.35)',
                     margin: '0 auto',
                     display: 'flex',
                     alignItems: 'center',
@@ -414,35 +446,44 @@ export function MarkAttendanceView({
                   {isCheckingIn ? (
                     <>
                       <Loader2 size={20} className="spin-animation" />
-                      <span>Recording Check-In...</span>
+                      <span>Syncing with Clock & Marking...</span>
                     </>
                   ) : (
                     <>
                       <UserCheck size={22} />
-                      <span>CHECK IN NOW</span>
+                      <span>CHECK IN NOW • {formattedLiveClock}</span>
                     </>
                   )}
                 </button>
-                <span style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '10px', display: 'block' }}>
-                  Grace period: {shift.late_grace_minutes} mins after {shift.start_time_formatted}
+                <span style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '12px', display: 'block' }}>
+                  Synced with School Clock: <strong>{formattedLiveClock}</strong> • Grace period: {shift.late_grace_minutes} mins after {shift.start_time_formatted}
                 </span>
               </div>
             ) : state === 'CHECKED_IN' ? (
-              /* STATE 2: CHECKED IN -> PROMINENT CHECK-OUT BUTTON */
+              /* STATE 2: CHECKED IN -> RUNNING TIMER + PROMINENT CHECK-OUT BUTTON */
               <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                <div style={{ marginBottom: '18px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px' }}>
-                    <CheckCircle2 size={20} style={{ color: '#166534' }} />
-                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#166534' }}>
-                      Checked In at {attendance?.check_in_formatted}
+                <div style={{ marginBottom: '20px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '18px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#16a34a', display: 'inline-block', boxShadow: '0 0 0 4px rgba(22, 163, 74, 0.2)' }}></span>
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: '#166534' }}>
+                      On Duty • Checked In at {formatTimeDisplay(attendance?.check_in, attendance?.check_in_formatted)}
                     </span>
                     {attendance?.status === 'Late' && (
                       <span className="status-pill badge-probation" style={{ fontSize: '0.72rem' }}>
-                        Late Arrival
+                        Late Arrival ({attendance.late_minutes}m)
                       </span>
                     )}
                   </div>
-                  <span style={{ fontSize: '0.8rem', color: '#166534' }}>
+
+                  {/* Live Running Shift Stopwatch */}
+                  <div style={{ textAlign: 'center', margin: '12px 0 8px' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active Shift Duration</span>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#14532d', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em', marginTop: '2px' }}>
+                      ⏱️ {elapsedDuration}
+                    </div>
+                  </div>
+
+                  <span style={{ fontSize: '0.8rem', color: '#166534', display: 'block', marginTop: '4px' }}>
                     Shift is active. Remember to check out before leaving the school campus.
                   </span>
                 </div>
@@ -454,16 +495,16 @@ export function MarkAttendanceView({
                   disabled={isCheckingOut}
                   style={{
                     width: '100%',
-                    maxWidth: '340px',
-                    height: '54px',
+                    maxWidth: '360px',
+                    height: '56px',
                     fontSize: '1.05rem',
                     fontWeight: 800,
-                    borderRadius: '10px',
+                    borderRadius: '12px',
                     backgroundColor: '#172033',
                     color: '#ffffff',
                     border: 'none',
-                    letterSpacing: '0.04em',
-                    boxShadow: '0 4px 14px 0 rgba(23, 32, 51, 0.25)',
+                    letterSpacing: '0.03em',
+                    boxShadow: '0 4px 16px 0 rgba(23, 32, 51, 0.25)',
                     margin: '0 auto',
                     display: 'flex',
                     alignItems: 'center',
@@ -474,12 +515,12 @@ export function MarkAttendanceView({
                   {isCheckingOut ? (
                     <>
                       <Loader2 size={20} className="spin-animation" />
-                      <span>Recording Check-Out...</span>
+                      <span>Recording Departure...</span>
                     </>
                   ) : (
                     <>
                       <Clock size={20} />
-                      <span>CHECK OUT NOW</span>
+                      <span>CHECK OUT NOW • {formattedLiveClock}</span>
                     </>
                   )}
                 </button>
@@ -487,38 +528,44 @@ export function MarkAttendanceView({
             ) : state === 'COMPLETED' ? (
               /* STATE 3: ATTENDANCE COMPLETED -> SHOW DETAILS + RE-MARK/UPDATE BUTTON */
               <div>
-                <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '18px 20px', marginBottom: '16px' }}>
+                <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#dcfce7', color: '#166534', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700 }}>
-                      <Check size={14} />
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#dcfce7', color: '#166534', padding: '5px 14px', borderRadius: '20px', fontSize: '0.84rem', fontWeight: 700 }}>
+                      <Check size={15} />
                       <span>Today's Attendance Completed</span>
                     </div>
 
-                    <span className="status-pill badge-active">
+                    <span className="status-pill badge-active" style={{ fontSize: '0.8rem', padding: '4px 12px' }}>
                       Status: {attendance?.status || 'Present'}
                     </span>
                   </div>
 
                   {/* Summary Metric Strip */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                    <div style={{ backgroundColor: '#ffffff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 600 }}>Check In</span>
-                      <strong style={{ fontSize: '1rem', color: '#172033' }}>{attendance?.check_in_formatted || '—'}</strong>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                    <div style={{ backgroundColor: '#ffffff', padding: '12px 10px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Check In</span>
+                      <strong style={{ fontSize: '1.05rem', color: '#172033', marginTop: '2px', display: 'block' }}>
+                        {formatTimeDisplay(attendance?.check_in, attendance?.check_in_formatted)}
+                      </strong>
                     </div>
-                    <div style={{ backgroundColor: '#ffffff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 600 }}>Check Out</span>
-                      <strong style={{ fontSize: '1rem', color: '#172033' }}>{attendance?.check_out_formatted || '—'}</strong>
+                    <div style={{ backgroundColor: '#ffffff', padding: '12px 10px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Check Out</span>
+                      <strong style={{ fontSize: '1.05rem', color: '#172033', marginTop: '2px', display: 'block' }}>
+                        {formatTimeDisplay(attendance?.check_out, attendance?.check_out_formatted)}
+                      </strong>
                     </div>
-                    <div style={{ backgroundColor: '#ffffff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 600 }}>Duration</span>
-                      <strong style={{ fontSize: '1rem', color: '#166534' }}>{attendance?.working_hours || '—'}</strong>
+                    <div style={{ backgroundColor: '#ffffff', padding: '12px 10px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Total Duration</span>
+                      <strong style={{ fontSize: '1.05rem', color: '#166534', marginTop: '2px', display: 'block' }}>
+                        {attendance?.working_hours || '—'}
+                      </strong>
                     </div>
                   </div>
                 </div>
 
                 {/* Always-Visible Action: Re-mark / Update Attendance */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', padding: '10px 14px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '0.84rem', color: '#64748b' }}>
                     Need to update your timings or remarks for today?
                   </div>
                   {isAdminOrHR ? (
@@ -709,7 +756,7 @@ export function MarkAttendanceView({
                       {new Date(item.attendance_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                     <span style={{ color: '#64748b' }}>
-                      {item.check_in ? new Date(item.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'}
+                      {formatTimeDisplay(item.check_in, item.check_in_formatted)}
                     </span>
                     <span className={`status-pill ${item.status === 'Present' ? 'badge-active' : item.status === 'Late' ? 'badge-probation' : 'badge-inactive'}`} style={{ fontSize: '0.68rem', padding: '2px 8px' }}>
                       {item.status}

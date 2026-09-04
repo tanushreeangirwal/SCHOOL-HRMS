@@ -98,6 +98,17 @@ export function Header({
     }
   };
 
+  const formatHeaderTime = (rawTime, fallback) => {
+    if (!rawTime && !fallback) return '—';
+    if (rawTime) {
+      const d = new Date(rawTime);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      }
+    }
+    return fallback || '—';
+  };
+
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -405,7 +416,7 @@ export function Header({
             {todayAttendance.state === 'CHECKED_IN' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', padding: '2px 6px 2px 10px', borderRadius: '20px', height: '28px', boxSizing: 'border-box' }}>
                 <span style={{ fontSize: '0.74rem', color: '#166534', fontWeight: 700 }}>
-                  In: {todayAttendance.attendance?.check_in_formatted}
+                  In: {formatHeaderTime(todayAttendance.attendance?.check_in, todayAttendance.attendance?.check_in_formatted)}
                 </span>
                 <button
                   type="button"

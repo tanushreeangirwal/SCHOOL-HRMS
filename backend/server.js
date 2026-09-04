@@ -1,3 +1,6 @@
+// Ensure application timezone is synchronized with school campus timezone (Asia/Kolkata)
+process.env.TZ = process.env.APP_TIMEZONE || 'Asia/Kolkata';
+
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
