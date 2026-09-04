@@ -252,22 +252,22 @@ export function MarkAttendanceView({
   return (
     <div className="mark-attendance-container" style={{ width: '100%', boxSizing: 'border-box' }}>
       {/* 1. Clear Tabbed Header Navigation */}
-      <div className="page-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
-        <div>
-          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#172033', margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
+      <div className="attendance-header-row">
+        <div className="attendance-header-titles">
+          <h1 className="attendance-title">
             Mark Attendance
           </h1>
-          <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
+          <p className="attendance-subtitle">
             Live check-in and check-out console for today's scheduled school shift.
           </p>
         </div>
 
         {/* Action Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="attendance-header-actions">
           {isAdminOrHR && onOpenAdminMarkModal && (
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
+              className="btn btn-secondary btn-sm attendance-action-btn-staff"
               onClick={onOpenAdminMarkModal}
               title="Mark or update attendance for other staff members"
             >
@@ -278,7 +278,7 @@ export function MarkAttendanceView({
 
           <button
             type="button"
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm attendance-action-btn-sync"
             onClick={() => fetchAttendanceStatus(true)}
             title="Refresh live status"
           >
@@ -289,10 +289,10 @@ export function MarkAttendanceView({
       </div>
 
       {/* 2. Unified Sub-Navigation Tabs */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+      <div className="attendance-subtabs-nav">
         <button
           type="button"
-          className="btn btn-primary btn-sm"
+          className="btn btn-primary btn-sm attendance-subtab-btn active"
           style={{ cursor: 'default' }}
         >
           <Clock size={15} />
@@ -302,7 +302,7 @@ export function MarkAttendanceView({
         {onNavigateToHistory && (
           <button
             type="button"
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm attendance-subtab-btn"
             onClick={onNavigateToHistory}
           >
             <Calendar size={15} />
@@ -313,7 +313,7 @@ export function MarkAttendanceView({
         {isAdminOrHR && onNavigateToDailyRoster && (
           <button
             type="button"
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm attendance-subtab-btn"
             onClick={onNavigateToDailyRoster}
           >
             <FileText size={15} />
@@ -337,51 +337,39 @@ export function MarkAttendanceView({
         </div>
       )}
 
-      {/* 4. Main Two-Column Console Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '24px', marginBottom: '24px' }}>
+      {/* 4. Main Console: Two Columns on Desktop, Vertically Stacked on Mobile */}
+      <div className="attendance-console-grid">
         
         {/* LEFT COLUMN: HERO ATTENDANCE CARD */}
-        <div 
-          style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderLeft: '4px solid #3155D9',
-            borderRadius: '12px',
-            padding: '24px',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between'
-          }}
-        >
-          {/* Top Info Bar */}
+        <div className="attendance-hero-card">
+          {/* Top Info Bar: Employee Identity + Live Clock */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '18px' }}>
-              <div>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', backgroundColor: '#eef2ff', color: '#3155D9', border: '1px solid #dbeafe', padding: '3px 9px', borderRadius: '5px', display: 'inline-block', marginBottom: '8px' }}>
+            <div className="attendance-hero-header">
+              <div className="attendance-emp-identity">
+                <span className="attendance-school-badge">
                   St. Vincent's High School
                 </span>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#172033', margin: '0 0 2px 0', letterSpacing: '-0.02em' }}>
+                <h2 className="attendance-emp-name">
                   {employee.full_name}
                 </h2>
-                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
-                  <span className="code-badge" style={{ marginRight: '6px' }}>{employee.employee_code}</span>
-                  {employee.designation_name} • {employee.department_name}
+                <p className="attendance-emp-meta">
+                  <span className="code-badge">{employee.employee_code}</span>
+                  <span className="attendance-emp-role">{employee.designation_name} • {employee.department_name}</span>
                 </p>
               </div>
 
               {/* Digital Clock Widget */}
-              <div style={{ textAlign: 'right', backgroundColor: '#f8fafc', padding: '10px 18px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#172033', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em' }}>
+              <div className="attendance-live-clock-widget">
+                <div className="attendance-live-time">
                   {formattedLiveClock}
                 </div>
-                <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '2px', fontWeight: 500 }}>
+                <div className="attendance-live-date">
                   {formattedCurrentDate}
                 </div>
               </div>
             </div>
 
-            <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '16px 0 20px' }} />
+            <hr className="attendance-divider" />
 
             {/* DYNAMIC ATTENDANCE ACTION DECK */}
             {isLoading ? (
@@ -424,24 +412,9 @@ export function MarkAttendanceView({
 
                 <button
                   type="button"
-                  className="btn btn-primary"
+                  className="btn btn-primary attendance-main-action-btn"
                   onClick={handleCheckIn}
                   disabled={isCheckingIn}
-                  style={{
-                    width: '100%',
-                    maxWidth: '360px',
-                    height: '56px',
-                    fontSize: '1.05rem',
-                    fontWeight: 800,
-                    borderRadius: '12px',
-                    letterSpacing: '0.03em',
-                    boxShadow: '0 4px 16px 0 rgba(49, 85, 217, 0.35)',
-                    margin: '0 auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px'
-                  }}
                 >
                   {isCheckingIn ? (
                     <>
@@ -461,11 +434,11 @@ export function MarkAttendanceView({
               </div>
             ) : state === 'CHECKED_IN' ? (
               /* STATE 2: CHECKED IN -> RUNNING TIMER + PROMINENT CHECK-OUT BUTTON */
-              <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                <div style={{ marginBottom: '20px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '18px 20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#16a34a', display: 'inline-block', boxShadow: '0 0 0 4px rgba(22, 163, 74, 0.2)' }}></span>
-                    <span style={{ fontSize: '1rem', fontWeight: 800, color: '#166534' }}>
+              <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                <div className="attendance-status-card-checkedin" style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
+                  <div className="attendance-status-title-row">
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#16a34a', display: 'inline-block', boxShadow: '0 0 0 4px rgba(22, 163, 74, 0.2)', flexShrink: 0 }}></span>
+                    <span style={{ color: '#166534' }}>
                       On Duty • Checked In at {formatTimeDisplay(attendance?.check_in, attendance?.check_in_formatted)}
                     </span>
                     {attendance?.status === 'Late' && (
@@ -476,9 +449,9 @@ export function MarkAttendanceView({
                   </div>
 
                   {/* Live Running Shift Stopwatch */}
-                  <div style={{ textAlign: 'center', margin: '12px 0 8px' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active Shift Duration</span>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#14532d', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em', marginTop: '2px' }}>
+                  <div style={{ textAlign: 'center', margin: '10px 0 6px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#166534', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active Shift Duration</span>
+                    <div className="attendance-stopwatch-val" style={{ fontWeight: 900, color: '#14532d', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em', marginTop: '2px' }}>
                       ⏱️ {elapsedDuration}
                     </div>
                   </div>
@@ -490,27 +463,9 @@ export function MarkAttendanceView({
 
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="btn btn-secondary attendance-checkout-action-btn"
                   onClick={handleCheckOut}
                   disabled={isCheckingOut}
-                  style={{
-                    width: '100%',
-                    maxWidth: '360px',
-                    height: '56px',
-                    fontSize: '1.05rem',
-                    fontWeight: 800,
-                    borderRadius: '12px',
-                    backgroundColor: '#172033',
-                    color: '#ffffff',
-                    border: 'none',
-                    letterSpacing: '0.03em',
-                    boxShadow: '0 4px 16px 0 rgba(23, 32, 51, 0.25)',
-                    margin: '0 auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px'
-                  }}
                 >
                   {isCheckingOut ? (
                     <>
@@ -528,7 +483,7 @@ export function MarkAttendanceView({
             ) : state === 'COMPLETED' ? (
               /* STATE 3: ATTENDANCE COMPLETED -> SHOW DETAILS + RE-MARK/UPDATE BUTTON */
               <div>
-                <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
+                <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '18px', marginBottom: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#dcfce7', color: '#166534', padding: '5px 14px', borderRadius: '20px', fontSize: '0.84rem', fontWeight: 700 }}>
                       <Check size={15} />
@@ -541,20 +496,20 @@ export function MarkAttendanceView({
                   </div>
 
                   {/* Summary Metric Strip */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                    <div style={{ backgroundColor: '#ffffff', padding: '12px 10px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                  <div className="attendance-summary-metrics">
+                    <div className="attendance-metric-box">
                       <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Check In</span>
                       <strong style={{ fontSize: '1.05rem', color: '#172033', marginTop: '2px', display: 'block' }}>
                         {formatTimeDisplay(attendance?.check_in, attendance?.check_in_formatted)}
                       </strong>
                     </div>
-                    <div style={{ backgroundColor: '#ffffff', padding: '12px 10px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                    <div className="attendance-metric-box">
                       <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Check Out</span>
                       <strong style={{ fontSize: '1.05rem', color: '#172033', marginTop: '2px', display: 'block' }}>
                         {formatTimeDisplay(attendance?.check_out, attendance?.check_out_formatted)}
                       </strong>
                     </div>
-                    <div style={{ backgroundColor: '#ffffff', padding: '12px 10px', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                    <div className="attendance-metric-box">
                       <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Total Duration</span>
                       <strong style={{ fontSize: '1.05rem', color: '#166534', marginTop: '2px', display: 'block' }}>
                         {attendance?.working_hours || '—'}
@@ -564,7 +519,7 @@ export function MarkAttendanceView({
                 </div>
 
                 {/* Always-Visible Action: Re-mark / Update Attendance */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <div className="attendance-re-mark-banner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '0.84rem', color: '#64748b' }}>
                     Need to update your timings or remarks for today?
                   </div>
@@ -598,7 +553,7 @@ export function MarkAttendanceView({
           </div>
 
           {/* Footer Notice */}
-          <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '14px', marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: '#64748b' }}>
+          <div className="attendance-footer-notice">
             <span>Source: Official St. Vincent's Web Self-Service</span>
             {onNavigateToHistory && (
               <button
@@ -614,18 +569,10 @@ export function MarkAttendanceView({
         </div>
 
         {/* RIGHT COLUMN: SHIFT DETAILS & ADMIN TOOLS */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="attendance-sidebar-col">
           
           {/* Shift Details Card */}
-          <div 
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '20px',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
-            }}
-          >
+          <div className="attendance-shift-card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#eef2ff', color: '#3155D9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <CalendarClock size={18} />
@@ -638,33 +585,25 @@ export function MarkAttendanceView({
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.84rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '6px' }}>
-                <span style={{ color: '#64748b' }}>Scheduled Hours</span>
-                <strong style={{ color: '#172033' }}>{shift.start_time_formatted} – {shift.end_time_formatted}</strong>
+            <div className="shift-kv-list">
+              <div className="shift-kv-item">
+                <span className="shift-kv-label">Scheduled Hours</span>
+                <strong className="shift-kv-value">{shift.start_time_formatted} – {shift.end_time_formatted}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '6px' }}>
-                <span style={{ color: '#64748b' }}>Late Grace Period</span>
-                <strong style={{ color: '#172033' }}>{shift.late_grace_minutes} minutes</strong>
+              <div className="shift-kv-item">
+                <span className="shift-kv-label">Late Grace Period</span>
+                <strong className="shift-kv-value">{shift.late_grace_minutes} minutes</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '6px' }}>
-                <span style={{ color: '#64748b' }}>Scheduled Days</span>
-                <strong style={{ color: '#172033' }}>{(shift.working_days || []).length} days / week</strong>
+              <div className="shift-kv-item">
+                <span className="shift-kv-label">Scheduled Days</span>
+                <strong className="shift-kv-value">{(shift.working_days || []).length} days / week</strong>
               </div>
             </div>
           </div>
 
           {/* Administrative Actions Card (For Admin / HR / Principal / Manager) */}
           {isAdminOrHR && (
-            <div 
-              style={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '20px',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
-              }}
-            >
+            <div className="attendance-admin-card">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <ShieldCheck size={18} />
@@ -710,15 +649,7 @@ export function MarkAttendanceView({
           )}
 
           {/* Recent Attendance Preview Strip */}
-          <div 
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '20px',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
-            }}
-          >
+          <div className="attendance-logs-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#172033', margin: 0 }}>
                 Recent Personal Logs

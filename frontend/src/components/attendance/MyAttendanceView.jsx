@@ -103,11 +103,11 @@ export function MyAttendanceView({
   return (
     <div className="attendance-view-content" style={{ width: '100%', boxSizing: 'border-box' }}>
       {/* Sub-Navigation Tabs */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+      <div className="attendance-subtabs-nav">
         {onNavigateToMarkAttendance && (
           <button
             type="button"
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm attendance-subtab-btn"
             onClick={onNavigateToMarkAttendance}
           >
             <Clock size={15} />
@@ -116,7 +116,7 @@ export function MyAttendanceView({
         )}
         <button
           type="button"
-          className="btn btn-primary btn-sm"
+          className="btn btn-primary btn-sm attendance-subtab-btn active"
           style={{ cursor: 'default' }}
         >
           <Calendar size={15} />
@@ -198,7 +198,7 @@ export function MyAttendanceView({
       </div>
 
       {/* 2. Monthly Summary Cards */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', marginBottom: '24px' }}>
+      <div className="stats-grid my-attendance-stats-grid" style={{ marginBottom: '24px' }}>
         <div className="stat-card stat-emerald">
           <div className="stat-content">
             <span className="stat-title">Present</span>
