@@ -195,25 +195,6 @@ export function MarkAttendanceView({
     }
   };
 
-  // Live shift running duration stopwatch
-  useEffect(() => {
-    if (state === 'CHECKED_IN' && attendance?.check_in) {
-      const updateTimer = () => {
-        const checkInMs = new Date(attendance.check_in).getTime();
-        const nowMs = new Date().getTime();
-        const diffMs = Math.max(0, nowMs - checkInMs);
-        const totalSec = Math.floor(diffMs / 1000);
-        const hrs = String(Math.floor(totalSec / 3600)).padStart(2, '0');
-        const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
-        const secs = String(totalSec % 60).padStart(2, '0');
-        setElapsedDuration(`${hrs}h ${mins}m ${secs}s`);
-      };
-      updateTimer();
-      const interval = setInterval(updateTimer, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [state, attendance?.check_in]);
-
   const employee = todayData?.employee || {
     first_name: user?.first_name || 'Staff',
     last_name: user?.last_name || '',
@@ -234,6 +215,25 @@ export function MarkAttendanceView({
   const state = todayData?.state || 'NOT_MARKED';
   const attendance = todayData?.attendance || null;
   const isWorkingDay = todayData?.is_working_day !== false;
+
+  // Live shift running duration stopwatch
+  useEffect(() => {
+    if (state === 'CHECKED_IN' && attendance?.check_in) {
+      const updateTimer = () => {
+        const checkInMs = new Date(attendance.check_in).getTime();
+        const nowMs = new Date().getTime();
+        const diffMs = Math.max(0, nowMs - checkInMs);
+        const totalSec = Math.floor(diffMs / 1000);
+        const hrs = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+        const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+        const secs = String(totalSec % 60).padStart(2, '0');
+        setElapsedDuration(`${hrs}h ${mins}m ${secs}s`);
+      };
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [state, attendance?.check_in]);
 
   const formattedCurrentDate = currentTime.toLocaleDateString('en-US', {
     weekday: 'long',

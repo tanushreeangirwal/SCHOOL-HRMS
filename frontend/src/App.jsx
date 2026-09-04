@@ -44,6 +44,7 @@ import MobileProfileView from './components/profile/MobileProfileView';
 import Toast from './components/common/Toast';
 import { TableSkeleton, LoadingSpinner } from './components/common/LoadingSpinner';
 import EmptyState from './components/common/EmptyState';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import './App.css';
 
@@ -957,20 +958,22 @@ function MainAppShell() {
           {/* VIEW 5: MY ATTENDANCE (PERSONAL SELF-SERVICE FOR ALL STAFF) */}
           {activeView === 'my-attendance' && (
             <div className="attendance-module-shell">
-              {attendanceSubTab === 'history' ? (
-                <MyAttendanceView
-                  onNavigateToMarkAttendance={() => setAttendanceSubTab('mark')}
-                />
-              ) : (
-                <MarkAttendanceView
-                  onNavigateToHistory={() => setAttendanceSubTab('history')}
-                  onOpenAdminMarkModal={() => handleOpenMarkAttendanceModal()}
-                  onNavigateToDailyRoster={() => {
-                    setActiveView('attendance');
-                    setAttendanceSubTab('daily');
-                  }}
-                />
-              )}
+              <ErrorBoundary title="My Attendance Record">
+                {attendanceSubTab === 'history' ? (
+                  <MyAttendanceView
+                    onNavigateToMarkAttendance={() => setAttendanceSubTab('mark')}
+                  />
+                ) : (
+                  <MarkAttendanceView
+                    onNavigateToHistory={() => setAttendanceSubTab('history')}
+                    onOpenAdminMarkModal={() => handleOpenMarkAttendanceModal()}
+                    onNavigateToDailyRoster={() => {
+                      setActiveView('attendance');
+                      setAttendanceSubTab('daily');
+                    }}
+                  />
+                )}
+              </ErrorBoundary>
             </div>
           )}
 
