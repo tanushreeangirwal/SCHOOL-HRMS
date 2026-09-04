@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, getManagerDepartmentIds } = require('../middleware/auth');
 
 // Helper: calculate working days between two dates inclusive
 function calculateLeaveDays(startDateStr, endDateStr) {
@@ -346,12 +346,23 @@ router.get('/requests', authenticateToken, async (req, res) => {
     let pIdx = 1;
 
     // Role-based scope: If employee role without management permissions, restrict to own
-    const userRole = req.user.role || req.user.role_name;
+    const userRole = (req.user.role || req.user.role_name || '').toLowerCase();
     const hasReadPerm = req.user.permissions && req.user.permissions.includes('leaves:read');
-    if (userRole === 'Employee' && !hasReadPerm) {
+    if (userRole === 'employee' && !hasReadPerm) {
       query += ` AND lr.employee_id = $${pIdx}`;
       params.push(req.user.employee_id);
       pIdx++;
+    } else if (userRole === 'manager') {
+      const managerDepts = await getManagerDepartmentIds(req.user);
+      if (managerDepts && managerDepts.length > 0) {
+        query += ` AND e.department_id = ANY($${pIdx}::uuid[])`;
+        params.push(managerDepts);
+        pIdx++;
+      } else if (managerDepts && managerDepts.length === 0) {
+        query += ` AND lr.employee_id = $${pIdx}`;
+        params.push(req.user.employee_id);
+        pIdx++;
+      }
     } else if (employee_id && employee_id !== 'ALL') {
       query += ` AND lr.employee_id = $${pIdx}`;
       params.push(employee_id);
@@ -670,7 +681,7 @@ router.put('/requests/:id/approve', authenticateToken, async (req, res) => {
     }
 
     const reqRes = await client.query(`
-      SELECT lr.*, lt.name AS leave_type_name, e.first_name, e.last_name
+      SELECT lr.*, lt.name AS leave_type_name, e.first_name, e.last_name, e.department_id
       FROM leave_requests lr
       JOIN leave_types lt ON lr.leave_type_id = lt.id
       JOIN employees e ON lr.employee_id = e.id
@@ -683,6 +694,15 @@ router.put('/requests/:id/approve', authenticateToken, async (req, res) => {
     }
 
     const request = reqRes.rows[0];
+
+    // Manager departmental scope verification
+    if (callerRole.toLowerCase() === 'manager') {
+      const managerDepts = await getManagerDepartmentIds(req.user);
+      if (!managerDepts || !managerDepts.includes(request.department_id)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ success: false, message: 'Access denied. You can only approve leave requests for employees within your authorized department.' });
+      }
+    }
 
     if (request.status !== 'Pending') {
       await client.query('ROLLBACK');
@@ -760,7 +780,7 @@ router.put('/requests/:id/reject', authenticateToken, async (req, res) => {
     }
 
     const reqRes = await client.query(`
-      SELECT lr.*, lt.name AS leave_type_name, e.first_name, e.last_name
+      SELECT lr.*, lt.name AS leave_type_name, e.first_name, e.last_name, e.department_id
       FROM leave_requests lr
       JOIN leave_types lt ON lr.leave_type_id = lt.id
       JOIN employees e ON lr.employee_id = e.id
@@ -773,6 +793,15 @@ router.put('/requests/:id/reject', authenticateToken, async (req, res) => {
     }
 
     const request = reqRes.rows[0];
+
+    // Manager departmental scope verification
+    if (callerRole.toLowerCase() === 'manager') {
+      const managerDepts = await getManagerDepartmentIds(req.user);
+      if (!managerDepts || !managerDepts.includes(request.department_id)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ success: false, message: 'Access denied. You can only reject leave requests for employees within your authorized department.' });
+      }
+    }
 
     if (request.status !== 'Pending') {
       await client.query('ROLLBACK');

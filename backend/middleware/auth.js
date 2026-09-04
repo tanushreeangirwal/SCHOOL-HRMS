@@ -1,8 +1,6 @@
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
-require('dotenv').config();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'school_hrms_jwt_fallback_secret_key';
+const { JWT_SECRET } = require('../config/jwtConfig');
 
 /**
  * Authentication Middleware:
@@ -35,6 +33,7 @@ async function authenticateToken(req, res, next) {
         e.employee_code,
         e.first_name,
         e.last_name,
+        e.department_id,
         e.employment_status,
         COALESCE(
           json_agg(p.name) FILTER (WHERE p.name IS NOT NULL),
@@ -46,7 +45,7 @@ async function authenticateToken(req, res, next) {
       LEFT JOIN role_permissions rp ON r.id = rp.role_id
       LEFT JOIN permissions p ON rp.permission_id = p.id
       WHERE u.id = $1
-      GROUP BY u.id, r.name, e.employee_code, e.first_name, e.last_name, e.employment_status;
+      GROUP BY u.id, r.name, e.employee_code, e.first_name, e.last_name, e.department_id, e.employment_status;
     `, [decoded.userId]);
 
     if (userResult.rows.length === 0) {
@@ -74,6 +73,7 @@ async function authenticateToken(req, res, next) {
       employee_code: user.employee_code,
       first_name: user.first_name,
       last_name: user.last_name,
+      department_id: user.department_id,
       employment_status: user.employment_status,
       two_factor_enabled: user.two_factor_enabled,
       permissions: Array.isArray(user.permissions) ? user.permissions : []
@@ -211,10 +211,36 @@ function requirePermission(...requiredPermissions) {
   };
 }
 
+/**
+ * Departmental Scope Resolver for Managers / HODs:
+ * Returns null if the user has institution-wide scope (Super Admin, Administrator, HR).
+ * Returns array of UUIDs of departments where the manager is HOD or assigned employee.
+ */
+async function getManagerDepartmentIds(user) {
+  const role = (user.role || '').toLowerCase().trim();
+  if (['super admin', 'administrator', 'admin', 'hr'].includes(role)) {
+    return null; // Full institution-wide access
+  }
+
+  const deptIds = new Set();
+  if (user.department_id) {
+    deptIds.add(user.department_id);
+  }
+
+  if (user.employee_id) {
+    // Check departments where this employee is designated head
+    const headRes = await pool.query('SELECT id FROM departments WHERE head_id = $1;', [user.employee_id]);
+    headRes.rows.forEach(r => deptIds.add(r.id));
+  }
+
+  return Array.from(deptIds);
+}
+
 module.exports = {
   authenticateToken,
   requireRole,
   requireSuperAdmin,
-  requirePermission
+  requirePermission,
+  getManagerDepartmentIds
 };
 

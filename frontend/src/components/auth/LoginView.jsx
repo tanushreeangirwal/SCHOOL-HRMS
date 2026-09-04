@@ -10,7 +10,6 @@ import {
   EyeOff, 
   KeyRound,
   ArrowLeft,
-  Sparkles,
   Users,
   CheckCircle2
 } from 'lucide-react';
@@ -21,8 +20,8 @@ export function LoginView({ onLoginSuccess }) {
   const { login, verify2FA } = useAuth();
 
   // Form State
-  const [identifier, setIdentifier] = useState('principal@school.edu');
-  const [password, setPassword] = useState('SchoolDemo@2026');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
@@ -31,53 +30,6 @@ export function LoginView({ onLoginSuccess }) {
   const [is2FAStage, setIs2FAStage] = useState(false);
   const [tempToken, setTempToken] = useState(null);
   const [totpCode, setTotpCode] = useState('');
-
-  // 4-Tier Role Hierarchy Demo Accounts
-  const demoAccounts = [
-    {
-      tierLabel: 'SUPER ADMIN',
-      roleTitle: 'Principal',
-      email: 'principal@school.edu',
-      desc: 'Institutional Executive Oversight',
-      badgeClass: 'badge-superadmin',
-      isTopTier: true
-    },
-    {
-      tierLabel: 'ADMIN',
-      roleTitle: 'Administrator',
-      email: 'admin@school.edu',
-      desc: 'HR Operations & System Lead',
-      badgeClass: 'badge-admin'
-    },
-    {
-      tierLabel: 'HR',
-      roleTitle: 'Human Resources',
-      email: 'hr@school.edu',
-      desc: 'Staff Management & Allocations',
-      badgeClass: 'badge-hr'
-    },
-    {
-      tierLabel: 'MANAGER',
-      roleTitle: 'Manager',
-      email: 'manager@school.edu',
-      desc: 'Academic Head & Department Lead',
-      badgeClass: 'badge-manager'
-    },
-    {
-      tierLabel: 'EMPLOYEE',
-      roleTitle: 'Employee',
-      email: 'teacher@school.edu',
-      desc: 'Faculty & Staff Portal',
-      badgeClass: 'badge-employee'
-    }
-  ];
-
-  const handleSelectDemo = (email) => {
-    setIdentifier(email);
-    setPassword('SchoolDemo@2026');
-    setErrorMessage(null);
-    setIs2FAStage(false);
-  };
 
   // Submit Step 1: Username/Password
   const handleCredentialSubmit = async (e) => {
@@ -303,38 +255,6 @@ export function LoginView({ onLoginSuccess }) {
               </div>
             </form>
           )}
-
-          {/* Quick Demo Switcher */}
-          <div className="login-demo-section">
-            <div className="login-demo-header">
-              <Sparkles size={14} className="text-amber" />
-              <span>Click a Demo Account to Fill Credentials:</span>
-            </div>
-
-            <div className="login-demo-grid">
-              {demoAccounts.map((acc) => {
-                const isSelected = identifier === acc.email;
-                return (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    className={`login-demo-pill ${isSelected ? 'selected' : ''} ${acc.isTopTier ? 'top-tier' : ''}`}
-                    onClick={() => handleSelectDemo(acc.email)}
-                    title={`Click to login as ${acc.tierLabel} (${acc.roleTitle})`}
-                  >
-                    <div className="login-demo-pill-header">
-                      <span className={`demo-badge ${acc.badgeClass}`}>
-                        {acc.tierLabel}
-                      </span>
-                      <span className="demo-role-title">{acc.roleTitle}</span>
-                    </div>
-                    <span className="login-demo-email">{acc.email}</span>
-                    <span className="login-demo-desc">{acc.desc}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
         {/* Institutional Footer */}

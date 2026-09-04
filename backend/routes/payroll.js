@@ -211,7 +211,7 @@ function calculateSalaryComponents(monthlyGross, items, payableDays, totalDaysIn
 // ============================================================================
 // 1. GET /api/payroll/overview: Top Dashboard KPIs & Status
 // ============================================================================
-router.get('/overview', authenticateToken, async (req, res) => {
+router.get('/overview', authenticateToken, requireRole('Super Admin', 'Administrator', 'HR'), async (req, res) => {
   try {
     const month = parseInt(req.query.month, 10) || (new Date().getMonth() + 1);
     const year = parseInt(req.query.year, 10) || new Date().getFullYear();
@@ -295,9 +295,9 @@ router.get('/overview', authenticateToken, async (req, res) => {
 });
 
 // ============================================================================
-// 2. GET /api/payroll/records: Employee Payroll Ledger (Filterable & Searchable)
+// 2. GET /api/payroll/records: Searchable & Filterable Monthly Register
 // ============================================================================
-router.get('/records', authenticateToken, async (req, res) => {
+router.get('/records', authenticateToken, requireRole('Super Admin', 'Administrator', 'HR'), async (req, res) => {
   try {
     const month = parseInt(req.query.month, 10) || (new Date().getMonth() + 1);
     const year = parseInt(req.query.year, 10) || new Date().getFullYear();
@@ -414,10 +414,13 @@ router.get('/records/:id', authenticateToken, async (req, res) => {
 
     const record = recordRes.rows[0];
 
-    // Check teacher self-access protection
-    const isEmp = (req.user.role || '').toLowerCase() === 'employee';
-    if (isEmp && record.employee_id !== req.user.employee_id) {
-      return res.status(403).json({ success: false, message: 'Access denied. You can only view your own payroll records.' });
+    // Strict ownership & RBAC protection: Only HR/Admin or the record owner can view
+    const userRole = (req.user.role || '').toLowerCase();
+    const isHrOrAdmin = ['super admin', 'administrator', 'admin', 'hr'].includes(userRole);
+    const isOwner = req.user.employee_id && record.employee_id === req.user.employee_id;
+
+    if (!isHrOrAdmin && !isOwner) {
+      return res.status(403).json({ success: false, message: 'Access denied. You do not have permission to view this payroll record.' });
     }
 
     res.json({
@@ -433,11 +436,7 @@ router.get('/records/:id', authenticateToken, async (req, res) => {
 // ============================================================================
 // 4. POST /api/payroll/process: Run Transparent Monthly Payroll Calculation
 // ============================================================================
-router.post('/process', authenticateToken, async (req, res) => {
-  const userRole = (req.user.role || '').toLowerCase();
-  if (userRole === 'employee') {
-    return res.status(403).json({ success: false, message: 'Teachers and employees cannot process payroll.' });
-  }
+router.post('/process', authenticateToken, requireRole('Super Admin', 'Administrator', 'HR'), async (req, res) => {
 
   const client = await pool.connect();
   try {
@@ -601,7 +600,7 @@ router.post('/process', authenticateToken, async (req, res) => {
 // ============================================================================
 // 5. POST /api/payroll/records/:id/status: Transition Record Status
 // ============================================================================
-router.post('/records/:id/status', authenticateToken, async (req, res) => {
+router.post('/records/:id/status', authenticateToken, requireRole('Super Admin', 'Administrator', 'HR'), async (req, res) => {
   try {
     const { id } = req.params;
     const { status, remarks } = req.body;
@@ -707,7 +706,7 @@ router.post('/batch-status', authenticateToken, async (req, res) => {
 // ============================================================================
 // 7. GET /api/payroll/components: List Salary Components (Earnings & Deductions)
 // ============================================================================
-router.get('/components', authenticateToken, async (req, res) => {
+router.get('/components', authenticateToken, requireRole('Super Admin', 'Administrator', 'HR'), async (req, res) => {
   try {
     const comps = await pool.query(`
       SELECT * FROM salary_components 
@@ -727,12 +726,8 @@ router.get('/components', authenticateToken, async (req, res) => {
 // ============================================================================
 // 8. POST /api/payroll/components: Create or Update Salary Component
 // ============================================================================
-router.post('/components', authenticateToken, async (req, res) => {
+router.post('/components', authenticateToken, requireRole('Super Admin', 'Administrator', 'HR'), async (req, res) => {
   try {
-    const userRole = (req.user.role || '').toLowerCase();
-    if (userRole === 'employee') {
-      return res.status(403).json({ success: false, message: 'Permission denied.' });
-    }
 
     const { id, name, code, component_type, description, is_taxable } = req.body;
 
@@ -775,7 +770,7 @@ router.post('/components', authenticateToken, async (req, res) => {
 // ============================================================================
 // 9. GET /api/payroll/structures: Salary Structures with Formula Items
 // ============================================================================
-router.get('/structures', authenticateToken, async (req, res) => {
+router.get('/structures', authenticateToken, requireRole('Super Admin', 'Administrator', 'HR'), async (req, res) => {
   try {
     const structsRes = await pool.query(`
       SELECT * FROM salary_structures WHERE is_active = true ORDER BY name ASC;
@@ -820,7 +815,7 @@ router.get('/structures', authenticateToken, async (req, res) => {
 // ============================================================================
 // 10. GET /api/payroll/assignments: Employee Salary Assignment Directory
 // ============================================================================
-router.get('/assignments', authenticateToken, async (req, res) => {
+router.get('/assignments', authenticateToken, requireRole('Super Admin', 'Administrator', 'HR'), async (req, res) => {
   try {
     const assignRes = await pool.query(`
       SELECT 
@@ -855,12 +850,8 @@ router.get('/assignments', authenticateToken, async (req, res) => {
 // ============================================================================
 // 11. POST /api/payroll/assignments: Assign or Update Employee Salary
 // ============================================================================
-router.post('/assignments', authenticateToken, async (req, res) => {
+router.post('/assignments', authenticateToken, requireRole('Super Admin', 'Administrator', 'HR'), async (req, res) => {
   try {
-    const userRole = (req.user.role || '').toLowerCase();
-    if (userRole === 'employee') {
-      return res.status(403).json({ success: false, message: 'Permission denied.' });
-    }
 
     const { employee_id, salary_structure_id, monthly_gross, annual_ctc, effective_from } = req.body;
 
@@ -940,9 +931,12 @@ router.get('/payslip/:id', authenticateToken, async (req, res) => {
 
     const slip = slipRes.rows[0];
 
-    // Security check: If teacher/employee role, verify ownership
-    const isEmp = (req.user.role || '').toLowerCase() === 'employee';
-    if (isEmp && slip.employee_id !== req.user.employee_id) {
+    // Strict ownership & RBAC protection: Only HR/Admin or the payslip owner can access
+    const userRole = (req.user.role || '').toLowerCase();
+    const isHrOrAdmin = ['super admin', 'administrator', 'admin', 'hr'].includes(userRole);
+    const isOwner = req.user.employee_id && slip.employee_id === req.user.employee_id;
+
+    if (!isHrOrAdmin && !isOwner) {
       return res.status(403).json({ success: false, message: 'Access denied. You can only view your own payslips.' });
     }
 

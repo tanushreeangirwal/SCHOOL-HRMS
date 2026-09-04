@@ -8,11 +8,9 @@ const pool = require('../db');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const emailService = require('../services/emailService');
 const smsService = require('../services/smsService');
-require('dotenv').config();
+const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/jwtConfig');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'school_hrms_jwt_fallback_secret_key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 // Helper: Query user with role and permissions
 async function getUserWithRoleAndPermissions(userId) {
@@ -711,17 +709,17 @@ router.post('/onboarding/send-phone-otp', async (req, res) => {
     // Dispatch OTP via SMS service
     const smsResult = await smsService.sendOTP({ to: cleanPhone, otp: rawOtp });
 
-    // In non-production testing, if ALLOW_DEV_OTP is enabled or provider unconfigured, pass test OTP
-    const isDev = process.env.NODE_ENV !== 'production';
-    const allowDevOtp = process.env.ALLOW_DEV_OTP === 'true' || isDev;
+    // Log OTP strictly to server console in development if SMS delivery is not configured
+    if (process.env.NODE_ENV !== 'production' && !smsResult.delivered) {
+      console.log(`[DEV ONLY] Phone OTP for ${cleanPhone}: ${rawOtp}`);
+    }
 
     return res.json({
       success: true,
       message: `Verification code sent to ${cleanPhone.slice(0, 3)}****${cleanPhone.slice(-4)}. Valid for 10 minutes.`,
       phone: cleanPhone,
       delivered: smsResult.delivered,
-      provider: smsResult.provider,
-      ...(allowDevOtp && !smsResult.delivered ? { devOtp: rawOtp } : {})
+      provider: smsResult.provider
     });
   } catch (error) {
     console.error('Onboarding send OTP error:', error);

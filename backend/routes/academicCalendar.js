@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { authenticateToken, requirePermission, requireSuperAdmin } = require('../middleware/auth');
+const { JWT_SECRET } = require('../config/jwtConfig');
 
 /**
  * Helper: Formats a JS Date to 'YYYY-MM-DD'
@@ -105,7 +106,7 @@ router.get('/stream', (req, res) => {
 
   try {
     const jwt = require('jsonwebtoken');
-    jwt.verify(token, process.env.JWT_SECRET || 'fallback_jwt_secret_svhs_2026');
+    jwt.verify(token, JWT_SECRET);
   } catch (e) {
     return res.status(403).json({ success: false, message: 'Invalid or expired stream authentication token.' });
   }
@@ -1224,7 +1225,7 @@ const authenticateFeed = (req, res, next) => {
     return res.status(401).json({ success: false, message: 'Authentication required for calendar feed.' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'school_hrms_super_secure_jwt_secret_key_2026_educore', (err, user) => {
+  jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
       return res.status(403).json({ success: false, message: 'Invalid or expired calendar feed token.' });
     }

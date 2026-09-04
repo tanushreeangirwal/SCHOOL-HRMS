@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const { authenticateToken, requireRole } = require('../middleware/auth');
+const { authenticateToken, requireRole, getManagerDepartmentIds } = require('../middleware/auth');
 
 const SCHOOL_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Kolkata';
 
@@ -218,6 +218,16 @@ router.get('/daily', authenticateToken, async (req, res) => {
 
     const params = [targetDate];
     let paramIndex = 2;
+
+    const userRole = (req.user.role || '').toLowerCase();
+    if (userRole === 'manager') {
+      const managerDepts = await getManagerDepartmentIds(req.user);
+      if (managerDepts && managerDepts.length > 0) {
+        query += ` AND e.department_id = ANY($${paramIndex}::uuid[])`;
+        params.push(managerDepts);
+        paramIndex++;
+      }
+    }
 
     if (department_id && department_id !== 'ALL') {
       query += ` AND (e.department_id = $${paramIndex} OR d.name = $${paramIndex})`;
@@ -794,6 +804,7 @@ router.post('/', authenticateToken, requireRole('Super Admin', 'Administrator', 
     const empRes = await pool.query(`
       SELECT 
         e.id, 
+        e.department_id,
         e.current_shift_id,
         s.start_time,
         s.end_time,
@@ -808,6 +819,18 @@ router.post('/', authenticateToken, requireRole('Super Admin', 'Administrator', 
     }
 
     const emp = empRes.rows[0];
+
+    // Manager departmental scope validation
+    const userRole = (req.user.role || '').toLowerCase();
+    if (userRole === 'manager') {
+      const managerDepts = await getManagerDepartmentIds(req.user);
+      if (!managerDepts || !managerDepts.includes(emp.department_id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only record attendance for employees within your authorized department.'
+        });
+      }
+    }
     let finalStatus = status || 'Present';
     let lateMinutes = 0;
 

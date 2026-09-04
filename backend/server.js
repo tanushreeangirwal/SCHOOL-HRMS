@@ -4,6 +4,8 @@ process.env.TZ = process.env.APP_TIMEZONE || 'Asia/Kolkata';
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const { rateLimit } = require("express-rate-limit");
 
 const authRoutes = require("./routes/auth");
 const employeeRoutes = require("./routes/employees");
@@ -18,6 +20,24 @@ const payrollRoutes = require("./routes/payroll");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Security Headers: Helmet (configured safely for cross-origin SPA communication)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false
+}));
+
+// Rate Limiter: Sensitive authentication endpoints (Brute-force protection)
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15-minute window
+  limit: 50, // 50 attempts per 15 min per IP (protects brute-force while safe for multi-user campus NAT)
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many authentication requests from this IP. Please try again after 15 minutes."
+  }
+});
 
 // Middleware - Configure CORS for production domains, Vercel frontend, and local development
 const configuredOrigins = process.env.CORS_ORIGIN
@@ -81,29 +101,27 @@ async function ensureSchemaUpdates() {
 }
 ensureSchemaUpdates();
 
-// Health check
+// Health check (Sanitized: never exposes internal database names or credentials)
 app.get("/api/health", async (req, res) => {
   try {
-    const dbRes = await pool.query("SELECT current_database();");
+    await pool.query("SELECT 1;");
     res.json({
       success: true,
-      message: "St. Vincent's School HRMS backend is running!",
-      database: dbRes.rows[0].current_database,
-      db_connected: true
+      status: "healthy",
+      message: "St. Vincent's School HRMS backend is running.",
+      timestamp: new Date().toISOString()
     });
   } catch (err) {
-    res.status(500).json({
+    res.status(503).json({
       success: false,
-      message: "Database connection failed",
-      error: err.message,
-      has_database_url: Boolean(process.env.DATABASE_URL),
-      has_jwt_secret: Boolean(process.env.JWT_SECRET)
+      status: "unhealthy",
+      message: "Database service temporarily unavailable."
     });
   }
 });
 
-// Authentication routes
-app.use("/api/auth", authRoutes);
+// Authentication routes with brute-force rate limiter
+app.use("/api/auth", authRateLimiter, authRoutes);
 
 // Department & Category routes
 app.use("/api/department-categories", departmentCategoryRoutes);
@@ -129,6 +147,16 @@ app.use("/api/payroll", payrollRoutes);
 
 // Employee routes
 app.use("/api/employees", employeeRoutes);
+
+// Safe Global Error Handler (Sanitizes error leaks in production)
+app.use((err, req, res, next) => {
+  console.error('[SERVER ERROR]', err.message);
+  const isProduction = (process.env.NODE_ENV || '').toLowerCase() === 'production';
+  res.status(err.status || 500).json({
+    success: false,
+    message: isProduction ? "An unexpected server error occurred." : (err.message || "Internal server error")
+  });
+});
 
 // Start server on 0.0.0.0 for containerized / cloud hosting
 app.listen(PORT, "0.0.0.0", () => {

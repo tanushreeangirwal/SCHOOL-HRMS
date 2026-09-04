@@ -1,7 +1,7 @@
 const express = require("express");
 const crypto = require("crypto");
 const pool = require("../db");
-const { authenticateToken, requirePermission } = require("../middleware/auth");
+const { authenticateToken, requirePermission, getManagerDepartmentIds } = require("../middleware/auth");
 const emailService = require("../services/emailService");
 
 const router = express.Router();
@@ -116,6 +116,18 @@ router.get("/", authenticateToken, async (req, res) => {
         });
       }
     } else {
+      // If manager, enforce departmental scoping
+      if (userRole === 'manager') {
+        const managerDepts = await getManagerDepartmentIds(user);
+        if (managerDepts && managerDepts.length > 0) {
+          params.push(managerDepts);
+          whereClauses.push(`e.department_id = ANY($${params.length}::uuid[])`);
+        } else if (managerDepts && managerDepts.length === 0) {
+          params.push(user.employee_id);
+          whereClauses.push(`e.id = $${params.length}`);
+        }
+      }
+
       // Status filter
       if (status && status.toLowerCase() !== 'all') {
         params.push(status);
@@ -146,14 +158,33 @@ router.get("/", authenticateToken, async (req, res) => {
       baseQuery += ` WHERE ` + whereClauses.join(' AND ');
     }
 
-    baseQuery += ` ORDER BY e.employee_code ASC`;
-
     const result = await pool.query(baseQuery, params);
+
+    // Mask sensitive salary information unless user is HR, Admin, or Super Admin
+    const canViewSalary = ['super admin', 'administrator', 'admin', 'hr'].includes(userRole) ||
+      user.permissions.includes('payroll:view');
+
+    const cleanRows = result.rows.map(row => {
+      if (!canViewSalary) {
+        const {
+          salary_assignment_id,
+          salary_structure_id,
+          salary_structure_name,
+          salary_structure_code,
+          monthly_gross,
+          annual_ctc,
+          salary_effective_from,
+          ...rest
+        } = row;
+        return rest;
+      }
+      return row;
+    });
 
     res.json({
       success: true,
-      count: result.rows.length,
-      data: result.rows
+      count: cleanRows.length,
+      data: cleanRows
     });
   } catch (error) {
     console.error("Error fetching employees:", error.message);
@@ -227,9 +258,36 @@ router.get("/:id", authenticateToken, async (req, res) => {
       });
     }
 
+    const employeeData = result.rows[0];
+
+    // Manager departmental scope verification
+    if (userRole === 'manager') {
+      const managerDepts = await getManagerDepartmentIds(user);
+      if (managerDepts && !managerDepts.includes(employeeData.department_id) && user.employee_id !== requestedId) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. You can only view employee profiles within your authorized department."
+        });
+      }
+    }
+
+    // Mask sensitive salary details if not authorized
+    const canViewSalary = ['super admin', 'administrator', 'admin', 'hr'].includes(userRole) ||
+      user.permissions.includes('payroll:view');
+
+    if (!canViewSalary) {
+      delete employeeData.salary_assignment_id;
+      delete employeeData.salary_structure_id;
+      delete employeeData.salary_structure_name;
+      delete employeeData.salary_structure_code;
+      delete employeeData.monthly_gross;
+      delete employeeData.annual_ctc;
+      delete employeeData.salary_effective_from;
+    }
+
     res.json({
       success: true,
-      data: result.rows[0]
+      data: employeeData
     });
   } catch (error) {
     console.error("Error fetching employee:", error.message);
