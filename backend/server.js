@@ -78,6 +78,7 @@ app.use(cors({
 app.use(express.json());
 
 const pool = require("./db");
+const { ensureTrainingModuleSchema } = require("./services/trainingMigration");
 
 // Auto-migrate schema updates safely on startup (supports Neon, Render, Supabase, local)
 async function ensureSchemaUpdates() {
@@ -95,7 +96,10 @@ async function ensureSchemaUpdates() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_otp_last_sent_at TIMESTAMP;
       UPDATE users SET account_status = 'ACTIVE' WHERE account_status IS NULL;
     `);
-    console.log("Database schema auto-migration verified successfully.");
+    console.log("Database user schema auto-migration verified successfully.");
+
+    // Ensure Training Module tables, permissions, and initial 3 programs exist
+    await ensureTrainingModuleSchema(pool);
   } catch (err) {
     console.error("Schema auto-migration check notice:", err.message);
   }

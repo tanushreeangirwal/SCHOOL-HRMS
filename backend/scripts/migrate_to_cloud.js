@@ -47,7 +47,10 @@ const TABLE_DEPENDENCY_ORDER = [
   'salary_structures',
   'salary_structure_items',
   'employee_salary_assignments',
-  'payroll_records'
+  'payroll_records',
+  'training_programs',
+  'training_enrollments',
+  'training_certificates'
 ];
 
 function maskConnectionString(url) {
