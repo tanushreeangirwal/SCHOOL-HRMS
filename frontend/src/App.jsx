@@ -22,6 +22,7 @@ import AssignEmployeeView from './components/departments/AssignEmployeeView';
 import DepartmentDetailModal from './components/departments/DepartmentDetailModal';
 import AddEditDepartmentModal from './components/departments/AddEditDepartmentModal';
 import DesignationListView from './components/designations/DesignationListView';
+import DesignationHierarchyView from './components/designations/DesignationHierarchyView';
 import AddEditDesignationModal from './components/designations/AddEditDesignationModal';
 import DesignationDetailModal from './components/designations/DesignationDetailModal';
 import ShiftListView from './components/shifts/ShiftListView';
@@ -60,8 +61,9 @@ function MainAppShell() {
   // Department Sub-Navigation State: 'view' | 'categories' | 'assign'
   const [departmentSubTab, setDepartmentSubTab] = useState('view');
 
-  // Designation Sub-Navigation State: 'view'
+  // Designation Sub-Navigation State: 'view' | 'hierarchy'
   const [designationSubTab, setDesignationSubTab] = useState('view');
+  const [designationFilterDept, setDesignationFilterDept] = useState('');
 
   // Shift Sub-Navigation State: 'view' | 'assign'
   const [shiftSubTab, setShiftSubTab] = useState('view');
@@ -786,6 +788,7 @@ function MainAppShell() {
         <Header
           activeView={activeView}
           departmentSubTab={departmentSubTab}
+          designationSubTab={designationSubTab}
           shiftSubTab={shiftSubTab}
           attendanceSubTab={attendanceSubTab}
           leaveSubTab={leaveSubTab}
@@ -915,18 +918,44 @@ function MainAppShell() {
           {/* VIEW 3: DESIGNATIONS MODULE */}
           {activeView === 'designations' && (
             <div className="designations-view-shell">
-              <DesignationListView
-                designations={designations}
-                departments={departments}
-                isLoading={isDesignationsLoading}
-                isRefreshing={isDesignationsRefreshing}
-                error={designationFetchError}
-                onRefresh={() => fetchDesignationsData(true)}
-                onAddDesignation={() => { setEditingDesignation(null); setIsAddDesignationModalOpen(true); }}
-                onEditDesignation={(desig) => { setEditingDesignation(desig); setIsAddDesignationModalOpen(true); }}
-                onViewDesignation={(desigId) => setSelectedDesignationId(desigId)}
-                onToggleStatus={handleToggleDesignationStatus}
-              />
+              {/* SUB-TAB 1: DIRECTORY / GROUPED ACCORDION TABLE (Screenshot 2) */}
+              {designationSubTab === 'view' && (
+                <DesignationListView
+                  designations={designations}
+                  departments={departments}
+                  isLoading={isDesignationsLoading}
+                  isRefreshing={isDesignationsRefreshing}
+                  error={designationFetchError}
+                  initialDepartmentSearch={designationFilterDept}
+                  onRefresh={() => fetchDesignationsData(true)}
+                  onAddDesignation={() => { setEditingDesignation(null); setIsAddDesignationModalOpen(true); }}
+                  onEditDesignation={(desig) => { setEditingDesignation(desig); setIsAddDesignationModalOpen(true); }}
+                  onViewDesignation={(desigId) => setSelectedDesignationId(desigId)}
+                  onToggleStatus={handleToggleDesignationStatus}
+                />
+              )}
+
+              {/* SUB-TAB 2: ROLE HIERARCHY & CARDS VIEW (Screenshot 1) */}
+              {designationSubTab === 'hierarchy' && (
+                <div className="designations-hierarchy-wrapper">
+                  <DesignationHierarchyView
+                    designations={designations}
+                    departments={departments}
+                    isLoading={isDesignationsLoading}
+                    isRefreshing={isDesignationsRefreshing}
+                    error={designationFetchError}
+                    onRefresh={() => fetchDesignationsData(true)}
+                    onAddDesignation={() => { setEditingDesignation(null); setIsAddDesignationModalOpen(true); }}
+                    onEditDesignation={(desig) => { setEditingDesignation(desig); setIsAddDesignationModalOpen(true); }}
+                    onViewDesignation={(desigId) => setSelectedDesignationId(desigId)}
+                    onToggleStatus={handleToggleDesignationStatus}
+                    onNavigateToDepartmentDirectory={(deptName) => {
+                      setDesignationFilterDept(deptName);
+                      setDesignationSubTab('view');
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
 

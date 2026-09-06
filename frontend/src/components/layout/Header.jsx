@@ -24,6 +24,7 @@ import { hrmsApi } from '../../services/api';
 export function Header({ 
   activeView, 
   departmentSubTab,
+  designationSubTab,
   shiftSubTab,
   attendanceSubTab,
   leaveSubTab,
@@ -184,6 +185,13 @@ export function Header({
         };
 
       case 'designations':
+        if (designationSubTab === 'hierarchy') {
+          return {
+            title: 'Designations & Role Hierarchy',
+            subtitle: 'Organize institutional designations into departmental faculties, administrative wings, and academic ranks.',
+            breadcrumbs: ["St. Vincent's High School", 'Designations', 'Hierarchy']
+          };
+        }
         return {
           title: 'Designation Management',
           subtitle: 'Manage faculty ranks, administrative positions, and designation tiers.',

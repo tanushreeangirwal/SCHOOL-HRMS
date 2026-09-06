@@ -484,7 +484,19 @@ export function Sidebar({
                       }}
                     >
                       <span className="subnav-dot">•</span>
-                      <span>View Designations</span>
+                      <span>Directory</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`clean-subnav-btn ${activeView === 'designations' && designationSubTab === 'hierarchy' ? 'active' : ''}`}
+                      onClick={() => {
+                        setActiveView('designations');
+                        setDesignationSubTab('hierarchy');
+                      }}
+                    >
+                      <span className="subnav-dot">•</span>
+                      <span>Role Hierarchy</span>
                     </button>
 
                     {canManageDesignations && (

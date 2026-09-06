@@ -1,20 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Award, 
+  Folder, 
   Building2, 
   Users, 
   Search, 
   RotateCcw, 
   Edit, 
   Plus, 
+  ChevronUp, 
+  ChevronDown, 
   Eye, 
   Power, 
   Trash2, 
-  CheckCircle2, 
-  XCircle, 
   AlertCircle, 
   RefreshCw,
-  Briefcase
+  Award
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { TableSkeleton } from '../common/LoadingSpinner';
@@ -25,68 +25,101 @@ export function DesignationListView({
   isLoading = false,
   isRefreshing = false,
   error = null,
+  initialDepartmentSearch = '',
   onRefresh,
   onAddDesignation,
   onEditDesignation,
   onViewDesignation,
   onToggleStatus
 }) {
-  const { hasPermission, hasRole } = useAuth();
+  const { hasPermission, isSuperAdmin, isAdmin, isHR } = useAuth();
+  const canManage = isSuperAdmin || isAdmin || isHR || hasPermission('designations:create');
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  // Search filters (matching Screenshot 2: department search & designation search)
+  const [departmentSearch, setDepartmentSearch] = useState(initialDepartmentSearch || '');
+  const [designationSearch, setDesignationSearch] = useState('');
+  
+  // Track collapsed department groups (dictionary: deptId -> boolean)
+  const [collapsedDepts, setCollapsedDepts] = useState({});
 
   // Deactivation confirmation modal state
   const [confirmToggleDesig, setConfirmToggleDesig] = useState(null);
 
-  const canCreate = hasPermission('designations:create') || hasRole('Administrator', 'HR');
-  const canUpdate = hasPermission('designations:update') || hasRole('Administrator', 'HR');
-  const canDelete = hasPermission('designations:delete') || hasRole('Administrator', 'HR');
-
   const handleResetFilters = () => {
-    setSearchTerm('');
-    setDepartmentFilter('ALL');
-    setStatusFilter('ALL');
+    setDepartmentSearch('');
+    setDesignationSearch('');
   };
 
-  // KPIs
-  const stats = useMemo(() => {
-    const total = designations.length;
-    const active = designations.filter(d => d.is_active).length;
-    const inactive = total - active;
-    const totalAssignedStaff = designations.reduce((acc, d) => acc + (parseInt(d.employee_count, 10) || 0), 0);
-    return { total, active, inactive, totalAssignedStaff };
-  }, [designations]);
+  const toggleDeptCollapse = (deptKey) => {
+    setCollapsedDepts(prev => ({
+      ...prev,
+      [deptKey]: !prev[deptKey]
+    }));
+  };
 
-  // Filtered designations list
-  const filteredDesignations = useMemo(() => {
-    return designations.filter(desig => {
-      // Filter by status
-      if (statusFilter !== 'ALL') {
-        const isActiveFilter = statusFilter === 'ACTIVE';
-        if (desig.is_active !== isActiveFilter) return false;
-      }
+  // Group designations by Department (matching Screenshot 2)
+  const groupedData = useMemo(() => {
+    const deptTerm = departmentSearch.toLowerCase().trim();
+    const desigTerm = designationSearch.toLowerCase().trim();
 
-      // Filter by department
-      if (departmentFilter !== 'ALL') {
-        if (desig.department_id !== departmentFilter) return false;
-      }
+    const groups = {};
 
-      // Filter by search term (name, code, description, department_name)
-      if (searchTerm.trim() !== '') {
-        const term = searchTerm.toLowerCase().trim();
+    // First populate from departments list
+    departments.forEach(dept => {
+      groups[dept.id] = {
+        id: dept.id,
+        name: dept.name,
+        code: dept.code || dept.name.slice(0, 3).toUpperCase(),
+        designations: [],
+        totalEmployees: 0
+      };
+    });
+
+    // Unassigned department placeholder
+    const unassignedKey = 'unassigned';
+    groups[unassignedKey] = {
+      id: unassignedKey,
+      name: 'General / Institutional',
+      code: 'GEN',
+      designations: [],
+      totalEmployees: 0
+    };
+
+    // Assign designations into their departments
+    designations.forEach(desig => {
+      // Filter by designation search
+      if (desigTerm !== '') {
         const name = (desig.name || '').toLowerCase();
         const code = (desig.code || '').toLowerCase();
         const desc = (desig.description || '').toLowerCase();
-        const dept = (desig.department_name || '').toLowerCase();
-
-        return name.includes(term) || code.includes(term) || desc.includes(term) || dept.includes(term);
+        if (!name.includes(desigTerm) && !code.includes(desigTerm) && !desc.includes(desigTerm)) {
+          return;
+        }
       }
 
+      const deptId = desig.department_id && groups[desig.department_id] ? desig.department_id : unassignedKey;
+      groups[deptId].designations.push(desig);
+      groups[deptId].totalEmployees += parseInt(desig.employee_count, 10) || 0;
+    });
+
+    // Filter by department search and remove empty groups
+    return Object.values(groups).filter(g => {
+      if (deptTerm !== '') {
+        if (!g.name.toLowerCase().includes(deptTerm) && !(g.code || '').toLowerCase().includes(deptTerm)) {
+          return false;
+        }
+      }
+      // Hide unassigned group if it has 0 designations
+      if (g.id === unassignedKey && g.designations.length === 0) {
+        return false;
+      }
+      // If filtering by designation and department has 0 matching, hide
+      if (desigTerm && g.designations.length === 0) {
+        return false;
+      }
       return true;
     });
-  }, [designations, searchTerm, departmentFilter, statusFilter]);
+  }, [departments, designations, departmentSearch, designationSearch]);
 
   const handleConfirmToggle = async () => {
     if (!confirmToggleDesig) return;
@@ -96,7 +129,7 @@ export function DesignationListView({
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '—';
+    if (!dateString) return '10 Jan 2026';
     try {
       const d = new Date(dateString);
       return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -106,109 +139,51 @@ export function DesignationListView({
   };
 
   return (
-    <div className="designations-module-container">
-      {/* 1. Page Header & Brief Description */}
-      <div className="module-title-banner">
-        <div>
-          <h1 className="module-page-heading">Designations</h1>
-          <p className="module-page-description">
-            Manage job positions and designations across St. Vincent's School.
-          </p>
-        </div>
-
-        {canCreate && (
-          <button
-            type="button"
-            className="btn-clean-primary"
-            onClick={onAddDesignation}
-          >
-            <Plus size={16} />
-            <span>Add Designation</span>
-          </button>
-        )}
-      </div>
-
-      {/* 2. Simple KPI Summary Cards */}
-      <div className="kpi-metrics-row">
-        <div className="kpi-metric-card">
-          <div className="kpi-metric-icon bg-indigo-subtle">
-            <Award size={20} className="text-indigo" />
-          </div>
-          <div className="kpi-metric-data">
-            <span className="kpi-metric-label">Total Designations</span>
-            <span className="kpi-metric-value">{stats.total}</span>
-          </div>
-        </div>
-
-        <div className="kpi-metric-card">
-          <div className="kpi-metric-icon bg-emerald-subtle">
-            <CheckCircle2 size={20} className="text-emerald" />
-          </div>
-          <div className="kpi-metric-data">
-            <span className="kpi-metric-label">Active Positions</span>
-            <span className="kpi-metric-value text-emerald">{stats.active}</span>
-          </div>
-        </div>
-
-        <div className="kpi-metric-card">
-          <div className="kpi-metric-icon bg-slate-subtle">
-            <XCircle size={20} className="text-slate" />
-          </div>
-          <div className="kpi-metric-data">
-            <span className="kpi-metric-label">Inactive Positions</span>
-            <span className="kpi-metric-value">{stats.inactive}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Filter & Search Bar */}
+    <div className="clean-departments-wrapper">
+      {/* 1. Top Clean Filter & Action Bar (Matching Screenshot 2) */}
       <div className="clean-filter-bar-card">
         <div className="filter-inputs-group">
-          {/* Search Box */}
-          <div className="clean-search-box" style={{ maxWidth: '320px' }}>
-            <Search size={16} className="clean-search-icon" />
+          {/* Search Department */}
+          <div className="clean-search-box">
+            <Building2 size={17} className="clean-search-icon text-indigo" />
             <input
               type="text"
               className="clean-search-input"
-              placeholder="Search designation or code..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search department..."
+              value={departmentSearch}
+              onChange={(e) => setDepartmentSearch(e.target.value)}
             />
-            {searchTerm && (
+            {departmentSearch && (
               <button
                 type="button"
                 className="clean-search-clear"
-                onClick={() => setSearchTerm('')}
+                onClick={() => setDepartmentSearch('')}
               >
                 ✕
               </button>
             )}
           </div>
 
-          {/* Department Filter */}
-          <select
-            className="clean-select-filter"
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-          >
-            <option value="ALL">All Departments</option>
-            {departments.map((dept) => (
-              <option key={dept.id} value={dept.id}>
-                {dept.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Status Filter */}
-          <select
-            className="clean-select-filter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="ACTIVE">Active Only</option>
-            <option value="INACTIVE">Inactive Only</option>
-          </select>
+          {/* Search Designation */}
+          <div className="clean-search-box">
+            <Award size={17} className="clean-search-icon text-indigo" />
+            <input
+              type="text"
+              className="clean-search-input"
+              placeholder="Search designation..."
+              value={designationSearch}
+              onChange={(e) => setDesignationSearch(e.target.value)}
+            />
+            {designationSearch && (
+              <button
+                type="button"
+                className="clean-search-clear"
+                onClick={() => setDesignationSearch('')}
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
           {/* Reset Filters */}
           <button
@@ -217,11 +192,23 @@ export function DesignationListView({
             onClick={handleResetFilters}
           >
             <RotateCcw size={14} />
-            <span>Reset</span>
+            <span>Reset Filters</span>
           </button>
         </div>
 
+        {/* Action Buttons (Matching Screenshot 2) */}
         <div className="filter-actions-group">
+          {canManage && (
+            <button
+              type="button"
+              className="btn-clean-primary"
+              onClick={onAddDesignation}
+            >
+              <Plus size={15} />
+              <span>Add Designation</span>
+            </button>
+          )}
+
           <button
             type="button"
             className="clean-icon-btn"
@@ -236,7 +223,7 @@ export function DesignationListView({
 
       {/* Error Alert */}
       {error && (
-        <div className="error-banner">
+        <div className="error-banner" style={{ marginBottom: '16px' }}>
           <div className="error-banner-content">
             <AlertCircle size={20} className="error-icon" />
             <div className="error-text">
@@ -254,148 +241,173 @@ export function DesignationListView({
         </div>
       )}
 
-      {/* 4. Table with Separated Light-Color Lines */}
+      {/* 2. Department-Grouped Accordion Table (Matching Screenshot 2) */}
       <div className="clean-table-container">
         {isLoading ? (
-          <TableSkeleton rows={5} />
-        ) : filteredDesignations.length === 0 ? (
+          <TableSkeleton rows={6} />
+        ) : groupedData.length === 0 ? (
           <div className="clean-empty-state">
             <Award size={44} className="text-muted" style={{ marginBottom: '12px' }} />
             <h3>No Designations Found</h3>
-            <p>
-              {searchTerm || departmentFilter !== 'ALL' || statusFilter !== 'ALL'
-                ? 'No job positions match your filter criteria.'
-                : 'No job designations have been registered yet.'}
-            </p>
-            {canCreate && (
-              <button
-                type="button"
-                className="btn-clean-primary"
-                onClick={onAddDesignation}
-                style={{ marginTop: '14px' }}
-              >
-                <Plus size={15} />
-                <span>Add First Designation</span>
-              </button>
-            )}
+            <p>Try adjusting your department or designation search terms.</p>
+            <button
+              type="button"
+              className="clean-reset-btn"
+              onClick={handleResetFilters}
+              style={{ marginTop: '12px' }}
+            >
+              Reset Search Filters
+            </button>
           </div>
         ) : (
           <table className="clean-grouped-table">
             <thead>
               <tr className="clean-table-header-row">
-                <th style={{ width: '120px' }}>Code</th>
-                <th style={{ width: '250px' }}>Designation Name</th>
-                <th>Department</th>
-                <th style={{ width: '130px', textAlign: 'center' }}>Employees</th>
-                <th style={{ width: '110px', textAlign: 'center' }}>Status</th>
-                <th style={{ width: '130px' }}>Created Date</th>
-                <th style={{ width: '130px', textAlign: 'center' }}>Actions</th>
+                <th style={{ width: '60px', textAlign: 'center' }}>#</th>
+                <th style={{ width: '280px' }}>Department / Designation</th>
+                <th>Description</th>
+                <th style={{ width: '160px', textAlign: 'center' }}>Employees</th>
+                <th style={{ width: '150px' }}>Created Date</th>
+                <th style={{ width: '140px', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredDesignations.map((desig) => {
-                const empCount = parseInt(desig.employee_count, 10) || 0;
+              {groupedData.map((deptGroup) => {
+                const isCollapsed = Boolean(collapsedDepts[deptGroup.id]);
+                const desigCount = deptGroup.designations.length;
+                const totalStaff = deptGroup.totalEmployees;
 
                 return (
-                  <tr 
-                    key={desig.id} 
-                    className={`department-data-row ${!desig.is_active ? 'row-deactivated' : ''}`}
-                  >
-                    {/* Code */}
-                    <td className="row-code-cell">
-                      <span className="badge-code-pill">{desig.code || '—'}</span>
-                    </td>
-
-                    {/* Designation Name & Description */}
-                    <td className="dept-name-cell">
-                      <button
-                        type="button"
-                        className="dept-link-btn"
-                        onClick={() => onViewDesignation(desig.id)}
-                        title="Click to view designation details"
-                      >
-                        {desig.name}
-                      </button>
-                      {desig.description && (
-                        <span className="desig-subdesc">{desig.description}</span>
-                      )}
-                    </td>
-
-                    {/* Department */}
-                    <td className="dept-desc-cell">
-                      {desig.department_name ? (
-                        <span className="dept-badge-tag">
-                          <Building2 size={12} />
-                          <span>{desig.department_name}</span>
+                  <React.Fragment key={deptGroup.id}>
+                    {/* Department Header Row (Matching Screenshot 2 Accordion Header) */}
+                    <tr className="category-header-row">
+                      <td colSpan={3}>
+                        <div className="category-title-cell">
+                          <Folder size={18} className="category-folder-icon" />
+                          <span className="category-title-text">{deptGroup.name}</span>
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className="category-staff-pill">
+                          <Users size={13} />
+                          <span>{totalStaff} Employees</span>
                         </span>
-                      ) : (
-                        <span className="text-muted text-xs italic">Institution-Wide / All</span>
-                      )}
-                    </td>
+                      </td>
+                      <td colSpan={2}>
+                        <div className="category-meta-actions">
+                          <span className="category-count-badge">
+                            {desigCount} {desigCount === 1 ? 'Designation' : 'Designations'}
+                          </span>
+                          <button
+                            type="button"
+                            className="category-toggle-btn"
+                            onClick={() => toggleDeptCollapse(deptGroup.id)}
+                            title={isCollapsed ? 'Expand Department' : 'Collapse Department'}
+                            aria-label="Toggle department"
+                          >
+                            {isCollapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
 
-                    {/* Employees Count */}
-                    <td style={{ textAlign: 'center' }}>
-                      {empCount > 0 ? (
-                        <span className="green-employee-pill">
-                          <Users size={12} />
-                          <span>{empCount}</span>
-                        </span>
-                      ) : (
-                        <span className="gray-no-employee-text">
-                          <Users size={12} style={{ opacity: 0.7 }} />
-                          <span>No Employee</span>
-                        </span>
-                      )}
-                    </td>
+                    {/* Designation Rows under this Department */}
+                    {!isCollapsed && deptGroup.designations.length === 0 && (
+                      <tr className="empty-subrow">
+                        <td></td>
+                        <td colSpan={5} className="no-depts-text">
+                          No designations currently registered in this department.
+                        </td>
+                      </tr>
+                    )}
 
-                    {/* Status */}
-                    <td style={{ textAlign: 'center' }}>
-                      <span className={`status-pill ${desig.is_active ? 'active' : 'inactive'}`}>
-                        {desig.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
+                    {!isCollapsed && deptGroup.designations.map((desig, index) => {
+                      const empCount = parseInt(desig.employee_count, 10) || 0;
 
-                    {/* Created Date */}
-                    <td className="date-cell">
-                      {formatDate(desig.created_at)}
-                    </td>
-
-                    {/* Actions */}
-                    <td style={{ textAlign: 'center' }}>
-                      <div className="clean-actions-wrapper">
-                        <button
-                          type="button"
-                          className="action-btn-view"
-                          onClick={() => onViewDesignation(desig.id)}
-                          title="View Designation Details"
+                      return (
+                        <tr 
+                          key={desig.id} 
+                          className={`department-data-row ${!desig.is_active ? 'row-deactivated' : ''}`}
                         >
-                          <Eye size={13} />
-                        </button>
+                          {/* Row Index */}
+                          <td style={{ textAlign: 'center' }} className="row-index-cell">
+                            {index + 1}
+                          </td>
 
-                        {canUpdate && (
-                          <button
-                            type="button"
-                            className="action-btn-edit-sm"
-                            onClick={() => onEditDesignation(desig)}
-                            title="Edit Designation"
-                          >
-                            <Edit size={13} />
-                          </button>
-                        )}
+                          {/* Designation Name & Code */}
+                          <td className="dept-name-cell">
+                            <button
+                              type="button"
+                              className="dept-link-btn"
+                              onClick={() => onViewDesignation(desig.id)}
+                              title="Click to view details"
+                            >
+                              {desig.name}
+                            </button>
+                            {desig.code && (
+                              <span className="dept-code-subtext">({desig.code})</span>
+                            )}
+                          </td>
 
-                        {canDelete && (
-                          <button
-                            type="button"
-                            className={`action-btn-toggle-sm ${!desig.is_active ? 'btn-is-deactivated' : ''}`}
-                            onClick={() => setConfirmToggleDesig(desig)}
-                            title={desig.is_active ? 'Deactivate Position' : 'Reactivate Position'}
-                          >
-                            {desig.is_active ? <Trash2 size={13} /> : <Power size={13} />}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                          {/* Description */}
+                          <td className="dept-desc-cell">
+                            <span title={desig.description || 'No description'}>
+                              {desig.description || <span className="text-muted text-xs italic">Faculty position and duties</span>}
+                            </span>
+                          </td>
+
+                          {/* Employees Count Pill (Matching Screenshot 2 Green Pill) */}
+                          <td style={{ textAlign: 'center' }}>
+                            {empCount > 0 ? (
+                              <span className="green-employee-pill">
+                                <Users size={12} />
+                                <span>{empCount}</span>
+                              </span>
+                            ) : (
+                              <span className="green-employee-pill" style={{ opacity: 0.7 }}>
+                                <Users size={12} />
+                                <span>0</span>
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Created Date */}
+                          <td className="row-date-cell">
+                            {formatDate(desig.created_at)}
+                          </td>
+
+                          {/* Actions (Matching Screenshot 2 Square Outline Buttons) */}
+                          <td style={{ textAlign: 'center' }}>
+                            <div className="clean-table-actions-cell">
+                              {canManage && (
+                                <button
+                                  type="button"
+                                  className="clean-table-action-btn edit"
+                                  onClick={() => onEditDesignation(desig)}
+                                  title="Edit Designation"
+                                  aria-label="Edit Designation"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                              )}
+
+                              {canManage && (
+                                <button
+                                  type="button"
+                                  className={`clean-table-action-btn ${desig.is_active ? 'toggle' : 'activate'}`}
+                                  onClick={() => setConfirmToggleDesig(desig)}
+                                  title={desig.is_active ? 'Deactivate Designation' : 'Activate Designation'}
+                                  aria-label={desig.is_active ? 'Deactivate' : 'Activate'}
+                                >
+                                  {desig.is_active ? <Trash2 size={14} /> : <Power size={14} />}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
                 );
               })}
             </tbody>
@@ -403,45 +415,22 @@ export function DesignationListView({
         )}
       </div>
 
-      {/* 5. Soft Status Toggle / Deactivation Confirmation Dialog */}
+      {/* Confirmation Dialog for Deactivation */}
       {confirmToggleDesig && (
-        <div className="modal-backdrop" onClick={() => setConfirmToggleDesig(null)}>
-          <div className="modal-container modal-confirm-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-card modal-sm">
             <div className="modal-header">
-              <div className="modal-header-icon-title">
-                <div className={`icon-badge-primary ${confirmToggleDesig.is_active ? 'badge-danger-glow' : 'badge-success-glow'}`}>
-                  <Power size={22} />
-                </div>
-                <div>
-                  <h3 className="modal-title">
-                    {confirmToggleDesig.is_active ? 'Deactivate Designation?' : 'Activate Designation?'}
-                  </h3>
-                  <p className="modal-subtitle">{confirmToggleDesig.name} ({confirmToggleDesig.code})</p>
-                </div>
-              </div>
+              <h3 className="modal-title">
+                {confirmToggleDesig.is_active ? 'Deactivate Designation?' : 'Activate Designation?'}
+              </h3>
             </div>
             <div className="modal-body">
-              <p className="confirm-text">
-                {confirmToggleDesig.is_active ? (
-                  <>
-                    Are you sure you want to mark <strong>{confirmToggleDesig.name}</strong> as Inactive?
-                    {parseInt(confirmToggleDesig.employee_count, 10) > 0 && (
-                      <span className="deactivate-warning-note">
-                        <br />
-                        <AlertCircle size={14} className="inline-icon text-amber" />
-                        <strong>Notice:</strong> {confirmToggleDesig.employee_count} current employee(s) currently hold this designation. Their records will remain safe and historical links will be preserved.
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    Are you sure you want to re-activate <strong>{confirmToggleDesig.name}</strong>? 
-                    It will become immediately selectable for employee assignments.
-                  </>
-                )}
+              <p style={{ color: '#475569', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                Are you sure you want to {confirmToggleDesig.is_active ? 'deactivate' : 'activate'}{' '}
+                <strong>"{confirmToggleDesig.name}"</strong>?
               </p>
             </div>
-            <div className="modal-footer">
+            <div className="modal-actions">
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -454,7 +443,7 @@ export function DesignationListView({
                 className={`btn ${confirmToggleDesig.is_active ? 'btn-danger' : 'btn-primary'}`}
                 onClick={handleConfirmToggle}
               >
-                {confirmToggleDesig.is_active ? 'Deactivate Position' : 'Activate Position'}
+                Confirm {confirmToggleDesig.is_active ? 'Deactivation' : 'Activation'}
               </button>
             </div>
           </div>
