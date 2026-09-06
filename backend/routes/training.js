@@ -43,6 +43,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
         COUNT(te.id) FILTER (WHERE te.completion_status = 'Completed') AS completed_enrollment_records
       FROM training_enrollments te
       JOIN employees e ON te.employee_id = e.id
+      LEFT JOIN training_programs tp ON te.training_id = tp.id
       WHERE 1=1 ${deptFilterProg} ${deptFilterEnroll};
     `);
     const enrollCounts = enrollStatsRes.rows[0];

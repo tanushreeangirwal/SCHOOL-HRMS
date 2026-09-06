@@ -76,8 +76,14 @@ export function TrainingModule() {
 
     try {
       const [dashRes, progRes, empRes, deptRes] = await Promise.all([
-        hrmsApi.getTrainingDashboard(),
-        hrmsApi.getTrainingPrograms(),
+        hrmsApi.getTrainingDashboard().catch(err => {
+          console.warn('Training dashboard fetch failed:', err);
+          return { success: false, data: null, error: err.message };
+        }),
+        hrmsApi.getTrainingPrograms().catch(err => {
+          console.warn('Training programs fetch failed:', err);
+          return { success: false, data: [], error: err.message };
+        }),
         hrmsApi.getEmployees({ limit: 100 }).catch(() => ({ data: [] })),
         hrmsApi.getDepartments().catch(() => ({ data: [] }))
       ]);
@@ -89,10 +95,14 @@ export function TrainingModule() {
         setPrograms(progRes.data || []);
       }
       if (empRes && empRes.success) {
-        setEmployees(empRes.data.employees || empRes.data || []);
+        setEmployees(empRes.data?.employees || empRes.data || []);
       }
       if (deptRes && deptRes.success) {
         setDepartments(deptRes.data || []);
+      }
+
+      if (!dashRes?.success && !progRes?.success) {
+        setError(dashRes?.error || progRes?.error || 'Failed to retrieve training module data. Please refresh.');
       }
     } catch (err) {
       console.error('Failed to load training module:', err);
@@ -260,9 +270,20 @@ export function TrainingModule() {
       </div>
 
       {error && (
-        <div className="error-banner">
-          <AlertCircle size={18} className="error-icon" />
-          <span>{error}</span>
+        <div className="error-banner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertCircle size={18} className="error-icon" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => fetchData(false)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
+          >
+            <RefreshCw size={13} />
+            <span>Retry</span>
+          </button>
         </div>
       )}
 
