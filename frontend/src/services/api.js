@@ -973,6 +973,115 @@ export const hrmsApi = {
       method: 'POST',
       body: JSON.stringify({ employee_id: employeeId })
     });
+  },
+
+  // --- TRAINING & DEVELOPMENT MODULE ---
+  async getTrainingDashboard(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/training/dashboard${query ? `?${query}` : ''}`);
+  },
+
+  async getTrainingPrograms(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/training/programs${query ? `?${query}` : ''}`);
+  },
+
+  async getTrainingProgramById(id) {
+    return request(`/training/programs/${id}`);
+  },
+
+  async createTrainingProgram(payload) {
+    return request('/training/programs', {
+      method: 'POST',
+      body: JSON.stringify(sanitizePayload(payload))
+    });
+  },
+
+  async updateTrainingProgram(id, payload) {
+    return request(`/training/programs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(sanitizePayload(payload))
+    });
+  },
+
+  async deleteTrainingProgram(id) {
+    return request(`/training/programs/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async getTrainingParticipants(trainingId) {
+    return request(`/training/programs/${trainingId}/participants`);
+  },
+
+  async enrollTrainingParticipants(trainingId, payload) {
+    return request(`/training/programs/${trainingId}/enroll`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async removeTrainingParticipant(trainingId, employeeId) {
+    return request(`/training/programs/${trainingId}/enroll/${employeeId}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async updateTrainingParticipantAttendance(trainingId, employeeId, payload) {
+    return request(`/training/programs/${trainingId}/participants/${employeeId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(sanitizePayload(payload))
+    });
+  },
+
+  async bulkUpdateTrainingAttendance(trainingId, payload) {
+    return request(`/training/programs/${trainingId}/bulk-attendance`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async getTrainingCertificates(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/training/certificates${query ? `?${query}` : ''}`);
+  },
+
+  async recordTrainingCertificate(payload) {
+    return request('/training/certificates', {
+      method: 'POST',
+      body: JSON.stringify(sanitizePayload(payload))
+    });
+  },
+
+  async updateTrainingCertificate(id, payload) {
+    return request(`/training/certificates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(sanitizePayload(payload))
+    });
+  },
+
+  async deleteTrainingCertificate(id) {
+    return request(`/training/certificates/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async getMyTrainings() {
+    return request('/training/my-trainings');
+  },
+
+  async getEmployeeTrainingHistory(employeeId) {
+    return request(`/training/employee/${employeeId}`);
+  },
+
+  async getTrainingCalendar(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/training/calendar${query ? `?${query}` : ''}`);
+  },
+
+  async getTrainingReports(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/training/reports${query ? `?${query}` : ''}`);
   }
 };
 

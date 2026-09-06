@@ -3,12 +3,12 @@
    ========================================================================== */
 
 :root {
-  /* Color Palette - Modern Light Institutional Theme */
-  --color-primary: #3155D9; /* Primary Blue */
-  --color-primary-accent: #3155D9;
-  --color-primary-hover: #2546C7; /* Primary Hover */
-  --color-primary-light: #EEF2FF; /* Very Light Primary */
-  --color-primary-focus: rgba(49, 85, 217, 0.15);
+  /* Color Palette - Refined Institutional Theme (V1 Source of Truth) */
+  --color-primary: #2563EB; /* Refined Royal Blue Accent */
+  --color-primary-accent: #2563EB;
+  --color-primary-hover: #1D4ED8; /* Primary Hover */
+  --color-primary-light: #EFF6FF; /* Soft Blue Tint */
+  --color-primary-focus: rgba(37, 99, 235, 0.15);
 
   --color-secondary: #0F766E;
   --color-secondary-hover: #115E59;
@@ -31,12 +31,14 @@
   --color-info-border: #BFDBFE;
 
   /* Neutral & Surface Tones - Clean Modern Light */
-  --bg-app: #F5F7FB;
+  --bg-app: #F8FAFC;
   --bg-surface: #FFFFFF;
   --bg-surface-secondary: #F8FAFC;
+  --bg-banner-warm: #FAF8F5; /* Warm Sand Off-White Hero Surface */
+  --border-banner-warm: #F0ECE3;
   --bg-sidebar: #FFFFFF;
   --bg-sidebar-hover: #F8FAFC;
-  --bg-sidebar-active: #EEF2FF;
+  --bg-sidebar-active: #F1F5F9;
 
   --text-main: #172033;
   --text-muted: #64748B;
@@ -47,20 +49,22 @@
   --border-medium: #CBD5E1;
 
   /* Elevation Shadows (Restrained & Subtle) */
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.07), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
 
   /* Border Radiuses */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 12px;
   --radius-xl: 16px;
+  --radius-2xl: 20px;
   --radius-full: 9999px;
 
   /* Typography */
+  --font-serif: 'Newsreader', 'Playfair Display', Georgia, serif;
   --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 

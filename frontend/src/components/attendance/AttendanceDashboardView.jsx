@@ -94,7 +94,7 @@ export function AttendanceDashboardView({
       {/* 1. Page Header & Date Picker */}
       <div className="page-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px 0' }}>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.65rem', fontWeight: 700, color: '#0f172a', margin: '0 0 4px 0', letterSpacing: '-0.015em' }}>
             Attendance Dashboard
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>

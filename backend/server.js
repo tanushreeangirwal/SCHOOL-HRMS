@@ -17,6 +17,7 @@ const attendanceRoutes = require("./routes/attendance");
 const leaveRoutes = require("./routes/leaves");
 const calendarRoutes = require("./routes/academicCalendar");
 const payrollRoutes = require("./routes/payroll");
+const trainingRoutes = require("./routes/training");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -147,6 +148,9 @@ app.use("/api/payroll", payrollRoutes);
 
 // Employee routes
 app.use("/api/employees", employeeRoutes);
+
+// Training & Development routes
+app.use("/api/training", trainingRoutes);
 
 // Safe Global Error Handler (Sanitizes error leaks in production)
 app.use((err, req, res, next) => {

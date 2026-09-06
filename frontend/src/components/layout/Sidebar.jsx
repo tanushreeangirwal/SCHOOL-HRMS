@@ -18,7 +18,8 @@ import {
   FileText,
   X,
   DollarSign,
-  CreditCard
+  CreditCard,
+  GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import StVincentsLogo from '../common/StVincentsLogo';
@@ -40,6 +41,8 @@ export function Sidebar({
   setCalendarSubTab,
   payrollSubTab = 'dashboard',
   setPayrollSubTab,
+  trainingSubTab = 'dashboard',
+  setTrainingSubTab,
   employeeCount = 0,
   departmentCount = 0,
   designationCount = 0,
@@ -62,6 +65,7 @@ export function Sidebar({
   const [isLeaveSubmenuOpen, setIsLeaveSubmenuOpen] = useState(activeView === 'leave');
   const [isCalendarSubmenuOpen, setIsCalendarSubmenuOpen] = useState(activeView === 'calendar');
   const [isPayrollSubmenuOpen, setIsPayrollSubmenuOpen] = useState(activeView === 'payroll');
+  const [isTrainingSubmenuOpen, setIsTrainingSubmenuOpen] = useState(activeView === 'training');
   const [isMyAttendanceSubmenuOpen, setIsMyAttendanceSubmenuOpen] = useState(activeView === 'my-attendance');
   const [isEmpSubmenuOpen, setIsEmpSubmenuOpen] = useState(activeView === 'employees');
 
@@ -81,6 +85,7 @@ export function Sidebar({
   const canViewAttendance = !isEmployee && (hasPermission('attendance:read') || isSuperAdmin || isAdmin || isHR || isManager);
   const canViewEmployeeDirectory = !isEmployee && (hasPermission('employees:read') || isSuperAdmin || isAdmin || isHR || isManager);
   const canViewPayroll = !isEmployee && (hasPermission('payroll:read') || isSuperAdmin || isAdmin || isHR || isManager);
+  const canViewTraining = !isEmployee && (hasPermission('training:read') || isSuperAdmin || isAdmin || isHR || isManager);
 
   const getDashboardLabel = () => {
     if (isSuperAdmin) return 'Executive Dashboard';
@@ -265,6 +270,19 @@ export function Sidebar({
                 <span className="clean-nav-text">My Payslips</span>
               </div>
               {activeView === 'my-payslips' && <div className="clean-active-indicator"></div>}
+            </button>
+
+            {/* 8. My Training & CPD */}
+            <button
+              type="button"
+              className={`clean-nav-item ${activeView === 'my-training' ? 'active' : ''}`}
+              onClick={() => setActiveView('my-training')}
+            >
+              <div className="clean-nav-left">
+                <GraduationCap size={18} className="clean-nav-icon" />
+                <span className="clean-nav-text">My Training & CPD</span>
+              </div>
+              {activeView === 'my-training' && <div className="clean-active-indicator"></div>}
             </button>
           </>
         ) : (
@@ -937,6 +955,21 @@ export function Sidebar({
                   </div>
                 )}
               </div>
+            )}
+
+            {/* 11. Training & Development Management */}
+            {canViewTraining && (
+              <button
+                type="button"
+                className={`clean-nav-item ${activeView === 'training' ? 'active' : ''}`}
+                onClick={() => setActiveView('training')}
+              >
+                <div className="clean-nav-left">
+                  <GraduationCap size={18} className="clean-nav-icon" />
+                  <span className="clean-nav-text">Training & Development</span>
+                </div>
+                {activeView === 'training' && <div className="clean-active-indicator"></div>}
+              </button>
             )}
           </>
         )}

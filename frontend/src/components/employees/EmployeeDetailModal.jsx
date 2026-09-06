@@ -18,7 +18,9 @@ import {
   DollarSign,
   Send,
   KeyRound,
-  CheckCircle2
+  CheckCircle2,
+  GraduationCap,
+  Award
 } from 'lucide-react';
 import { hrmsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -44,16 +46,27 @@ export function EmployeeDetailModal({ employeeId, onClose }) {
   const [inviteCooldown, setInviteCooldown] = useState(0);
   const [lastInviteUrl, setLastInviteUrl] = useState(null);
 
+  // Training & Development state
+  const [trainingData, setTrainingData] = useState(null);
+
   const fetchDetails = async () => {
     if (!employeeId) return;
     setIsLoading(true);
     setError(null);
     try {
-      const response = await hrmsApi.getEmployeeById(employeeId);
+      const [response, trainRes] = await Promise.all([
+        hrmsApi.getEmployeeById(employeeId),
+        hrmsApi.getEmployeeTrainingHistory(employeeId).catch(() => null)
+      ]);
+
       if (response && response.success && response.data) {
         setEmployee(response.data);
       } else {
         throw new Error(response?.message || 'Employee record not found.');
+      }
+
+      if (trainRes && trainRes.success) {
+        setTrainingData(trainRes.data);
       }
     } catch (err) {
       console.error('Error fetching employee details:', err);
@@ -559,6 +572,83 @@ export function EmployeeDetailModal({ employeeId, onClose }) {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* 7. Professional Development & Training History */}
+              <div className="detail-card full-width-span">
+                <div className="detail-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <GraduationCap size={17} className="detail-icon" style={{ color: '#3155D9' }} />
+                    <h3>Professional Development & Training History</h3>
+                  </div>
+                  {trainingData && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.74rem' }}>
+                      <span style={{ backgroundColor: '#eef2ff', color: '#3155D9', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                        {trainingData.total_trainings_completed || 0} Modules Completed
+                      </span>
+                      <span style={{ backgroundColor: '#ecfeff', color: '#0891b2', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                        {trainingData.total_training_hours || 0} CPD Hours
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {(!trainingData?.training_history || trainingData.training_history.length === 0) ? (
+                  <div style={{ padding: '16px', textAlign: 'center', color: '#64748b', fontSize: '0.84rem' }}>
+                    No training records found for this faculty member.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div className="table-responsive">
+                      <table className="table" style={{ width: '100%', fontSize: '0.8rem' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', color: '#475569' }}>Training Attended</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', color: '#475569' }}>Date</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', color: '#475569' }}>Trainer / Provider</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'center', color: '#475569' }}>Hours</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', color: '#475569' }}>Status</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', color: '#475569' }}>Certificate Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {trainingData.training_history.map((th) => (
+                            <tr key={th.enrollment_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '8px 12px', fontWeight: 600, color: '#0f172a' }}>
+                                {th.title}
+                              </td>
+                              <td style={{ padding: '8px 12px', color: '#475569' }}>
+                                {formatDate(th.start_date)}
+                              </td>
+                              <td style={{ padding: '8px 12px', color: '#475569' }}>
+                                {th.trainer_name} {th.training_provider ? `(${th.training_provider})` : ''}
+                              </td>
+                              <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: '#0891b2' }}>
+                                {th.hours_completed} hrs
+                              </td>
+                              <td style={{ padding: '8px 12px' }}>
+                                <span className={`status-pill badge-${th.completion_status === 'Completed' ? 'active' : 'pending'}`} style={{ fontSize: '0.7rem' }}>
+                                  <span className="status-dot"></span>
+                                  <span>{th.completion_status}</span>
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                                {th.certificate_id ? (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#15803d', fontWeight: 600, fontSize: '0.74rem' }}>
+                                    <Award size={12} />
+                                    <span>Awarded ({th.certificate_number || 'ID Verified'})</span>
+                                  </span>
+                                ) : (
+                                  <span style={{ color: '#94a3b8', fontSize: '0.74rem' }}>None</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* System Audit Metadata Footer */}

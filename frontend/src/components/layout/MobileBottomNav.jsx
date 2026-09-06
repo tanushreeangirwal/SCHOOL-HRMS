@@ -12,7 +12,8 @@ import {
   X,
   ChevronRight,
   Building2,
-  Users
+  Users,
+  GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { StaffAvatar } from '../common/StaffAvatar';
@@ -117,6 +118,40 @@ export function MobileBottomNav({
             </div>
             <ChevronRight size={16} className="text-muted" />
           </button>
+
+          {/* My Training & CPD (Available to all staff) */}
+          <button 
+            type="button" 
+            className="mobile-sheet-item"
+            onClick={() => handleNavClick('my-training')}
+          >
+            <div className="mobile-sheet-icon" style={{ backgroundColor: '#eff6ff', color: '#2563eb' }}>
+              <GraduationCap size={18} />
+            </div>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <span className="mobile-sheet-item-title">My Training & CPD</span>
+              <span className="mobile-sheet-item-desc">Assigned workshops & certificates</span>
+            </div>
+            <ChevronRight size={16} className="text-muted" />
+          </button>
+
+          {/* Admin Training Management (For HR / Admins / Managers) */}
+          {(!isEmployee) && (
+            <button 
+              type="button" 
+              className="mobile-sheet-item"
+              onClick={() => handleNavClick('training')}
+            >
+              <div className="mobile-sheet-icon" style={{ backgroundColor: '#f5f3ff', color: '#7c3aed' }}>
+                <GraduationCap size={18} />
+              </div>
+              <div style={{ flex: 1, textAlign: 'left' }}>
+                <span className="mobile-sheet-item-title">Training Management</span>
+                <span className="mobile-sheet-item-desc">Dashboard, cohorts & attendance</span>
+              </div>
+              <ChevronRight size={16} className="text-muted" />
+            </button>
+          )}
 
           {/* Two-Factor Authentication Security */}
           <button 

@@ -115,12 +115,12 @@ export function LeaveDashboardView({ onNavigateTab }) {
         gap: '16px',
         backgroundColor: '#ffffff',
         padding: '20px 24px',
-        borderRadius: '12px',
+        borderRadius: '16px',
         border: '1px solid #e2e8f0',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
       }}>
         <div>
-          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.65rem', fontWeight: 700, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '10px', letterSpacing: '-0.015em' }}>
             <CalendarRange size={24} className="text-primary" />
             Institutional Leave Management
           </h1>
@@ -161,146 +161,89 @@ export function LeaveDashboardView({ onNavigateTab }) {
         </div>
       )}
 
-      {/* 5 KPI Cards Grid */}
+      {/* 5 V1 KPI Cards Grid */}
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
         gap: '16px' 
       }}>
         {/* KPI 1: Pending */}
-        <div style={{ 
-          backgroundColor: '#ffffff', 
-          borderRadius: '12px', 
-          padding: '18px 20px', 
-          border: '1px solid #fed7aa',
-          borderLeft: '5px solid #f97316',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#c2410c', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Pending Review
-              </span>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#9a3412', marginTop: '4px' }}>
-                {kpis.pending_requests}
-              </div>
-            </div>
-            <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ea580c' }}>
-              <Clock size={22} />
+        <div className="kpi-card">
+          <div className="kpi-header">
+            <span className="kpi-title">Pending Review</span>
+            <div className="kpi-icon-pill amber">
+              <Clock size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '0.76rem', color: '#9a3412', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span>Requires administrative action</span>
+          <div className="kpi-body">
+            <span className="kpi-value">{kpis.pending_requests}</span>
+            <div className="kpi-trend" style={{ color: '#d97706', fontWeight: 600 }}>
+              <span>Requires admin review</span>
+            </div>
           </div>
         </div>
 
         {/* KPI 2: On Leave Today */}
-        <div style={{ 
-          backgroundColor: '#ffffff', 
-          borderRadius: '12px', 
-          padding: '18px 20px', 
-          border: '1px solid #bfdbfe',
-          borderLeft: '5px solid #3b82f6',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                On Leave Today
-              </span>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#1e40af', marginTop: '4px' }}>
-                {kpis.on_leave_today}
-              </div>
-            </div>
-            <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
-              <Users size={22} />
+        <div className="kpi-card">
+          <div className="kpi-header">
+            <span className="kpi-title">On Leave Today</span>
+            <div className="kpi-icon-pill indigo">
+              <Users size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '0.76rem', color: '#1e40af', marginTop: '10px' }}>
-            <span>Faculty & staff away today</span>
+          <div className="kpi-body">
+            <span className="kpi-value">{kpis.on_leave_today}</span>
+            <div className="kpi-trend">
+              <span>Staff away today</span>
+            </div>
           </div>
         </div>
 
         {/* KPI 3: Approved */}
-        <div style={{ 
-          backgroundColor: '#ffffff', 
-          borderRadius: '12px', 
-          padding: '18px 20px', 
-          border: '1px solid #bbf7d0',
-          borderLeft: '5px solid #10b981',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Approved
-              </span>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#065f46', marginTop: '4px' }}>
-                {kpis.approved_requests}
-              </div>
-            </div>
-            <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669' }}>
-              <CheckCircle2 size={22} />
+        <div className="kpi-card">
+          <div className="kpi-header">
+            <span className="kpi-title">Approved</span>
+            <div className="kpi-icon-pill emerald">
+              <CheckCircle2 size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '0.76rem', color: '#065f46', marginTop: '10px' }}>
-            <span>Granted leave applications</span>
+          <div className="kpi-body">
+            <span className="kpi-value">{kpis.approved_requests}</span>
+            <div className="kpi-trend trend-positive">
+              <span>Granted applications</span>
+            </div>
           </div>
         </div>
 
         {/* KPI 4: Rejected */}
-        <div style={{ 
-          backgroundColor: '#ffffff', 
-          borderRadius: '12px', 
-          padding: '18px 20px', 
-          border: '1px solid #fecaca',
-          borderLeft: '5px solid #ef4444',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Rejected
-              </span>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#991b1b', marginTop: '4px' }}>
-                {kpis.rejected_requests}
-              </div>
-            </div>
-            <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>
-              <XCircle size={22} />
+        <div className="kpi-card">
+          <div className="kpi-header">
+            <span className="kpi-title">Rejected</span>
+            <div className="kpi-icon-pill" style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}>
+              <XCircle size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '0.76rem', color: '#991b1b', marginTop: '10px' }}>
-            <span>Denied or revoked</span>
+          <div className="kpi-body">
+            <span className="kpi-value">{kpis.rejected_requests}</span>
+            <div className="kpi-trend" style={{ color: '#94a3b8' }}>
+              <span>Denied or revoked</span>
+            </div>
           </div>
         </div>
 
         {/* KPI 5: Total Requests */}
-        <div style={{ 
-          backgroundColor: '#ffffff', 
-          borderRadius: '12px', 
-          padding: '18px 20px', 
-          border: '1px solid #e2e8f0',
-          borderLeft: '5px solid #64748b',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Total Submissions
-              </span>
-              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#1e293b', marginTop: '4px' }}>
-                {kpis.total_requests}
-              </div>
-            </div>
-            <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
-              <FileText size={22} />
+        <div className="kpi-card">
+          <div className="kpi-header">
+            <span className="kpi-title">Total Submissions</span>
+            <div className="kpi-icon-pill sky">
+              <FileText size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '10px' }}>
-            <span>Overall applications</span>
+          <div className="kpi-body">
+            <span className="kpi-value">{kpis.total_requests}</span>
+            <div className="kpi-trend">
+              <span>Overall requests</span>
+            </div>
           </div>
         </div>
       </div>

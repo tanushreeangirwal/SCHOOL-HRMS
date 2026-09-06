@@ -39,6 +39,8 @@ import { LeaveModuleView } from './components/leave/LeaveModuleView';
 import { AcademicCalendarModule } from './components/calendar/AcademicCalendarModule';
 import PayrollModule from './components/payroll/PayrollModule';
 import MyPayslipsView from './components/payroll/MyPayslipsView';
+import TrainingModule from './components/training/TrainingModule';
+import MyTrainingView from './components/training/MyTrainingView';
 import OnboardingWizard from './components/auth/OnboardingWizard';
 import MobileBottomNav from './components/layout/MobileBottomNav';
 import MobileProfileView from './components/profile/MobileProfileView';
@@ -76,17 +78,20 @@ function MainAppShell() {
   // Payroll Sub-Navigation State: 'dashboard' | 'records' | 'structures'
   const [payrollSubTab, setPayrollSubTab] = useState('dashboard');
 
+  // Training Sub-Navigation State: 'dashboard' | 'programs' | 'attendance' | 'certificates' | 'calendar' | 'reports'
+  const [trainingSubTab, setTrainingSubTab] = useState('dashboard');
+
   // Mobile Navigation Drawer State
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Auto-close mobile drawer on navigation
   useEffect(() => {
     setIsMobileMenuOpen(false);
-  }, [activeView, departmentSubTab, shiftSubTab, attendanceSubTab, leaveSubTab, calendarSubTab, payrollSubTab]);
+  }, [activeView, departmentSubTab, shiftSubTab, attendanceSubTab, leaveSubTab, calendarSubTab, payrollSubTab, trainingSubTab]);
 
   // Guard: if Employee tries to access restricted administrative modules, redirect to dashboard
   useEffect(() => {
-    if (isEmployee && (activeView === 'departments' || activeView === 'designations' || activeView === 'shifts' || activeView === 'attendance' || activeView === 'payroll')) {
+    if (isEmployee && (activeView === 'departments' || activeView === 'designations' || activeView === 'shifts' || activeView === 'attendance' || activeView === 'payroll' || activeView === 'training')) {
       setActiveView('dashboard');
     }
   }, [isEmployee, activeView]);
@@ -759,6 +764,8 @@ function MainAppShell() {
         setCalendarSubTab={setCalendarSubTab}
         payrollSubTab={payrollSubTab}
         setPayrollSubTab={setPayrollSubTab}
+        trainingSubTab={trainingSubTab}
+        setTrainingSubTab={setTrainingSubTab}
         employeeCount={employees.length}
         departmentCount={departments.length}
         designationCount={designations.length}
@@ -784,6 +791,7 @@ function MainAppShell() {
           leaveSubTab={leaveSubTab}
           calendarSubTab={calendarSubTab}
           payrollSubTab={payrollSubTab}
+          trainingSubTab={trainingSubTab}
           selectedEmployeeName={selectedEmployeeName}
           selectedDepartmentName={selectedDepartmentName}
           selectedDesignationName={selectedDesignationName}
@@ -1140,6 +1148,24 @@ function MainAppShell() {
           {activeView === 'profile' && (
             <div className="mobile-profile-shell">
               <MobileProfileView onOpen2FAModal={() => setIs2FAModalOpen(true)} />
+            </div>
+          )}
+
+          {/* VIEW 14: TRAINING & DEVELOPMENT (ADMIN / HR / PRINCIPAL / HOD) */}
+          {activeView === 'training' && (
+            <div className="training-module-shell">
+              <TrainingModule 
+                trainingSubTab={trainingSubTab} 
+                setTrainingSubTab={setTrainingSubTab} 
+                departments={departments} 
+              />
+            </div>
+          )}
+
+          {/* VIEW 15: MY TRAINING & CPD (FACULTY / STAFF SELF-SERVICE) */}
+          {activeView === 'my-training' && (
+            <div className="my-training-module-shell">
+              <MyTrainingView />
             </div>
           )}
         </main>

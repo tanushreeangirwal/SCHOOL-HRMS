@@ -271,21 +271,14 @@ export function DashboardView({
     }
 
     return (
-      <div className="action-required-container" style={{
-        backgroundColor: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '12px',
-        padding: '18px 22px',
-        marginBottom: '24px',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+      <div className="action-required-container" style={{ marginBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }}></div>
-            <h3 style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#0f172a', margin: 0 }}>
-              Action Required & Pending Approvals
-            </h3>
-            <span style={{ fontSize: '0.72rem', backgroundColor: '#fee2e2', color: '#b91c1c', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
+            <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#ef4444' }}></div>
+            <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>
+              Needs attention
+            </span>
+            <span style={{ fontSize: '0.72rem', backgroundColor: '#fee2e2', color: '#ef4444', fontWeight: 700, padding: '1px 7px', borderRadius: '12px' }}>
               {actionItems.length}
             </span>
           </div>
@@ -294,10 +287,10 @@ export function DashboardView({
             className="btn btn-ghost btn-xs" 
             onClick={() => fetchDashboardKPIs(true)}
             disabled={isRefreshing}
-            style={{ fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#64748b' }}
+            style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#64748b' }}
           >
-            <RefreshCw size={12} className={isRefreshing ? 'spin-anim' : ''} />
-            <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+            <RefreshCw size={12} className={isRefreshing ? 'spin-animation' : ''} />
+            <span>Refresh</span>
           </button>
         </div>
 
@@ -309,11 +302,12 @@ export function DashboardView({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '12px 16px',
-                backgroundColor: item.priority === 'high' ? '#fffaf0' : '#f8fafc',
-                border: item.priority === 'high' ? '1px solid #fed7aa' : '1px solid #e2e8f0',
-                borderRadius: '8px',
-                gap: '12px',
+                padding: '16px 20px',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+                gap: '16px',
                 flexWrap: 'wrap'
               }}
             >
@@ -328,15 +322,16 @@ export function DashboardView({
                       fontSize: '0.68rem',
                       fontWeight: 700,
                       textTransform: 'uppercase',
-                      padding: '1px 6px',
+                      padding: '2px 7px',
                       borderRadius: '4px',
-                      backgroundColor: item.priority === 'high' ? '#fee2e2' : '#e0f2fe',
-                      color: item.priority === 'high' ? '#991b1b' : '#0369a1'
+                      backgroundColor: '#eff6ff',
+                      color: '#2563eb',
+                      letterSpacing: '0.04em'
                     }}>
-                      {item.priority} priority
+                      {item.priority?.toUpperCase() || 'STANDARD'} PRIORITY
                     </span>
                   </div>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                  <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
                     {item.description}
                   </p>
                 </div>
@@ -345,14 +340,16 @@ export function DashboardView({
               <div>
                 <button
                   type="button"
-                  className="btn btn-secondary btn-xs"
+                  className="btn btn-secondary btn-sm"
                   onClick={item.onClick}
                   style={{
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    color: '#2563eb',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    color: '#1e293b',
                     backgroundColor: '#ffffff',
-                    border: '1px solid #cbd5e1',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '6px 14px',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px'
@@ -918,12 +915,12 @@ export function DashboardView({
         <div className="dashboard-welcome-banner hr-banner">
           <div className="welcome-text-container">
             <div className="welcome-tag">
-              <Award size={14} />
-              <span>👥 Human Resources Management</span>
+              <ShieldCheck size={14} />
+              <span>HUMAN RESOURCES MANAGEMENT</span>
             </div>
 
             <h2 className="welcome-title">
-              Faculty & Staff Personnel Administration
+              Personnel Administration
             </h2>
 
             <p className="welcome-subtitle">

@@ -1,8 +1,2 @@
 .env
-.env.*
-!.env.example
 node_modules/
-backend/.env
-frontend/.env
-dist/
-frontend/dist/

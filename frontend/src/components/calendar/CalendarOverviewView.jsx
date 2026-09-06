@@ -150,11 +150,11 @@ export function CalendarOverviewView({
         </div>
 
         {/* KPI 2: Current Term */}
-        <div className="stat-card stat-violet" style={{ borderLeftColor: '#7c3aed' }}>
+        <div className="stat-card stat-violet">
           <div className="stat-content">
             <span className="stat-title">Current School Term</span>
             <div className="stat-number-wrapper">
-              <span className="stat-number" style={{ fontSize: '1.15rem', color: '#7c3aed' }}>
+              <span className="stat-number" style={{ fontSize: '1.15rem', color: '#172033' }}>
                 {overviewData?.active_term?.name ? overviewData.active_term.name.split('(')[0].trim() : 'Term 1'}
               </span>
             </div>
@@ -168,11 +168,11 @@ export function CalendarOverviewView({
         </div>
 
         {/* KPI 3: Upcoming Holiday */}
-        <div className="stat-card stat-rose" style={{ borderLeftColor: '#e11d48' }}>
+        <div className="stat-card stat-rose">
           <div className="stat-content">
             <span className="stat-title">Upcoming Holiday</span>
             <div className="stat-number-wrapper">
-              <span className="stat-number" style={{ fontSize: '1.05rem', color: '#e11d48', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span className="stat-number" style={{ fontSize: '1.05rem', color: '#172033', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {overviewData?.upcoming_holiday?.title || 'None upcoming'}
               </span>
             </div>
