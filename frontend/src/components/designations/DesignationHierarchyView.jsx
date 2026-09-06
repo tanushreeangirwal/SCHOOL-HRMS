@@ -286,71 +286,90 @@ export function DesignationHierarchyView({
             const desigCount = group.designations.length;
 
             return (
-              <div key={group.id} className="category-card">
-                <div className="category-card-header">
-                  <div className="category-card-title-wrap">
-                    <div className="category-icon-box">
+              <div 
+                key={group.id} 
+                className={`category-item-card ${!group.is_active ? 'category-inactive' : ''}`}
+                onClick={() => {
+                  if (onNavigateToDepartmentDirectory) {
+                    onNavigateToDepartmentDirectory(group.name);
+                  }
+                }}
+              >
+                {/* 1. Card Top Header */}
+                <div className="category-card-top">
+                  <div className="category-title-wrap">
+                    <div className="category-icon-avatar">
                       <Building2 size={18} />
                     </div>
-                    <div className="category-title-info">
+                    <div>
                       <div className="category-name-row">
                         <h3 className="category-name">{group.name}</h3>
                         {group.code && (
-                          <span className="category-code-tag">{group.code}</span>
+                          <span className="category-code-tag text-monospace">{group.code}</span>
                         )}
                       </div>
                     </div>
                   </div>
-                  <span className={`status-pill ${group.is_active ? 'active' : 'inactive'}`}>
+                  <span className={`status-pill ${group.is_active ? 'badge-active' : 'badge-inactive'}`}>
                     <span className="status-dot"></span>
-                    {group.is_active ? 'Active' : 'Inactive'}
+                    <span>{group.is_active ? 'Active' : 'Inactive'}</span>
                   </span>
                 </div>
 
-                <p className="category-desc">{group.description}</p>
+                {/* 2. Card Description */}
+                <p className="category-desc">
+                  {group.description || <span className="text-muted text-xs italic">No description provided</span>}
+                </p>
 
-                {/* Sub-box listing designations (Matching Screenshot 1) */}
-                <div className="category-assigned-departments-box">
-                  <div className="assigned-dept-header">
-                    <div className="assigned-dept-count-badge">
+                {/* 3. Sub-box listing designations with clean tag chips */}
+                <div className="category-dept-summary">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span className={`category-dept-count-badge ${desigCount > 0 ? 'has-depts' : 'no-depts'}`}>
                       <Award size={13} />
                       <span>{desigCount} {desigCount === 1 ? 'Designation' : 'Designations'}</span>
-                    </div>
+                    </span>
                     {group.totalEmployees > 0 && (
-                      <span className="category-staff-meta">
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
                         <Users size={12} />
                         <span>{group.totalEmployees} Staff</span>
                       </span>
                     )}
                   </div>
 
-                  <div className="category-dept-pills-list">
+                  <div className="category-dept-pills-preview">
                     {desigCount === 0 ? (
-                      <span className="no-depts-label">No designations registered for this department.</span>
+                      <span className="text-muted text-xs italic">No designations registered for this department.</span>
                     ) : (
-                      group.designations.slice(0, 4).map((desig) => (
-                        <span 
-                          key={desig.id} 
-                          className="dept-pill-tag"
-                          title={`${desig.name} (${desig.code || 'No Code'}) • ${desig.employee_count || 0} Staff`}
-                          onClick={() => onViewDesignation(desig.id)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          {desig.name}
-                        </span>
-                      ))
-                    )}
-                    {desigCount > 4 && (
-                      <span className="dept-pill-more">+{desigCount - 4} more</span>
+                      <>
+                        {group.designations.slice(0, 4).map((desig) => (
+                          <span 
+                            key={desig.id} 
+                            className="dept-mini-pill"
+                            title={`${desig.name} (${desig.code || 'No Code'}) • ${desig.employee_count || 0} Staff`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewDesignation(desig.id);
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {desig.name}
+                          </span>
+                        ))}
+                        {desigCount > 4 && (
+                          <span className="dept-mini-pill more-pill">
+                            +{desigCount - 4} more
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
 
-                {/* Card Footer Actions */}
-                <div className="category-card-footer">
+                {/* 4. Card Footer Actions */}
+                <div className="category-card-actions" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
-                    className="btn-view-departments"
+                    className="btn-category-action view-btn"
                     onClick={() => {
                       if (onNavigateToDepartmentDirectory) {
                         onNavigateToDepartmentDirectory(group.name);
@@ -361,12 +380,15 @@ export function DesignationHierarchyView({
                     <span>View Designations</span>
                   </button>
 
-                  <div className="category-card-icon-actions">
+                  <div className="category-actions-right">
                     {canManage && group.designations.length > 0 && (
                       <button
                         type="button"
-                        className="card-action-btn edit"
-                        onClick={() => onEditDesignation(group.designations[0])}
+                        className="btn-action-icon edit"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditDesignation(group.designations[0]);
+                        }}
                         title={`Edit ${group.designations[0].name}`}
                       >
                         <Edit3 size={14} />
@@ -375,8 +397,11 @@ export function DesignationHierarchyView({
                     {canManage && group.designations.length > 0 && (
                       <button
                         type="button"
-                        className="card-action-btn toggle"
-                        onClick={() => setConfirmToggleItem(group.designations[0])}
+                        className={`btn-action-icon ${group.designations[0].is_active ? 'deactivate' : 'activate'}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmToggleItem(group.designations[0]);
+                        }}
                         title={group.designations[0].is_active ? 'Deactivate' : 'Activate'}
                       >
                         <Power size={14} />

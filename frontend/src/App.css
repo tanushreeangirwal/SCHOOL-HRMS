@@ -3965,17 +3965,28 @@
 }
 
 .dept-mini-pill {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 500;
-  padding: 2px 8px;
+  padding: 3px 9px;
   background: #ffffff;
   color: #334155;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   white-space: nowrap;
-  max-width: 130px;
+  max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dept-mini-pill:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: var(--primary);
+  transform: translateY(-1px);
 }
 
 .dept-mini-pill.more-pill {
@@ -3983,6 +3994,182 @@
   color: #6d28d9;
   border-color: #ddd6fe;
   font-weight: 600;
+}
+
+/* Category card backward-compatibility and hierarchy card styling */
+.category-card {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.category-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.category-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.category-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #eef2ff;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.category-assigned-departments-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: var(--radius-md);
+  border: 1px solid #f1f5f9;
+  margin-bottom: 16px;
+}
+
+.assigned-dept-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.assigned-dept-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0369a1;
+}
+
+.category-dept-pills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dept-pill-tag {
+  font-size: 0.74rem;
+  font-weight: 500;
+  padding: 3px 9px;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  white-space: nowrap;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dept-pill-tag:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.dept-pill-more {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  background: #ede9fe;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.category-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
+  gap: 10px;
+}
+
+.btn-view-departments {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: #eef2ff;
+  border: 1px solid #e0e7ff;
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-view-departments:hover {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+.category-card-icon-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  background: #ffffff;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.card-action-btn:hover {
+  border-color: #cbd5e1;
+  color: var(--text-main);
+  background: #f8fafc;
+}
+
+.card-action-btn.edit:hover {
+  color: var(--primary);
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.card-action-btn.toggle:hover {
+  color: #dc2626;
+  background: #fef2f2;
+  border-color: #fecaca;
 }
 
 /* Card Actions */
