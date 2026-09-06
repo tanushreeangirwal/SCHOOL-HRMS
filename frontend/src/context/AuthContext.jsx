@@ -3,6 +3,30 @@ import { hrmsApi, getStoredToken, setStoredToken, removeStoredToken } from '../s
 
 const AuthContext = createContext(null);
 
+// Demo account personnel mapping for consistent display across environments
+const DEMO_PERSONNEL_MAP = {
+  'principal@school.edu': { full_name: 'Dr. Alistair Sterling', first_name: 'Alistair', last_name: 'Sterling' },
+  'admin@school.edu': { full_name: 'Malcolm Hayes', first_name: 'Malcolm', last_name: 'Hayes' },
+  'hr@school.edu': { full_name: 'Clara Higgins', first_name: 'Clara', last_name: 'Higgins' },
+  'manager@school.edu': { full_name: 'Julian Mercer', first_name: 'Julian', last_name: 'Mercer' },
+  'teacher@school.edu': { full_name: 'Evelyn Reed', first_name: 'Evelyn', last_name: 'Reed' }
+};
+
+function normalizeUser(rawUser) {
+  if (!rawUser) return null;
+  const emailKey = rawUser.email?.toLowerCase();
+  const demoOverride = DEMO_PERSONNEL_MAP[emailKey];
+  if (demoOverride) {
+    return {
+      ...rawUser,
+      full_name: demoOverride.full_name,
+      first_name: demoOverride.first_name,
+      last_name: demoOverride.last_name
+    };
+  }
+  return rawUser;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(getStoredToken());
@@ -20,7 +44,7 @@ export function AuthProvider({ children }) {
     try {
       const response = await hrmsApi.getMe();
       if (response && response.success && response.user) {
-        setUser(response.user);
+        setUser(normalizeUser(response.user));
         setToken(existingToken);
       } else {
         removeStoredToken();
@@ -66,12 +90,13 @@ export function AuthProvider({ children }) {
         };
       } else {
         // Direct login completed
+        const normalized = normalizeUser(response.user);
         setStoredToken(response.token);
         setToken(response.token);
-        setUser(response.user);
+        setUser(normalized);
         return {
           require2fa: false,
-          user: response.user
+          user: normalized
         };
       }
     } else {
@@ -83,10 +108,11 @@ export function AuthProvider({ children }) {
   const verify2FA = async (tempToken, code) => {
     const response = await hrmsApi.verify2FA(tempToken, code);
     if (response.success && response.token) {
+      const normalized = normalizeUser(response.user);
       setStoredToken(response.token);
       setToken(response.token);
-      setUser(response.user);
-      return response.user;
+      setUser(normalized);
+      return normalized;
     } else {
       throw new Error(response.message || '2FA verification failed');
     }
@@ -105,7 +131,7 @@ export function AuthProvider({ children }) {
     try {
       const response = await hrmsApi.getMe();
       if (response && response.success) {
-        setUser(response.user);
+        setUser(normalizeUser(response.user));
       }
     } catch (err) {
       console.error('Failed to refresh user profile:', err);
