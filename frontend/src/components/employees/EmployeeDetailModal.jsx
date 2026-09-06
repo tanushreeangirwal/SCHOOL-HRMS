@@ -20,7 +20,8 @@ import {
   KeyRound,
   CheckCircle2,
   GraduationCap,
-  Award
+  Award,
+  Edit3
 } from 'lucide-react';
 import { hrmsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -28,8 +29,9 @@ import { LoadingSpinner } from '../common/LoadingSpinner';
 import { StaffAvatar } from '../common/StaffAvatar';
 import AssignSalaryModal from '../payroll/AssignSalaryModal';
 
-export function EmployeeDetailModal({ employeeId, onClose }) {
-  const { isSuperAdmin, isAdmin, isHR } = useAuth();
+export function EmployeeDetailModal({ employeeId, onClose, onEdit }) {
+  const { isSuperAdmin, isAdmin, isHR, hasPermission } = useAuth();
+  const canEdit = isSuperAdmin || isAdmin || isHR || (hasPermission && hasPermission('employees:update'));
   const canManageSalary = isSuperAdmin || isAdmin || isHR;
   const canManageInvites = isSuperAdmin || isAdmin || isHR;
 
@@ -213,14 +215,28 @@ export function EmployeeDetailModal({ employeeId, onClose }) {
             </div>
           )}
 
-          <button 
-            type="button" 
-            className="modal-close-btn" 
-            onClick={onClose}
-            aria-label="Close profile modal"
-          >
-            <X size={20} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {canEdit && onEdit && employee && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => onEdit(employee)}
+                title="Edit Employee Profile"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem' }}
+              >
+                <Edit3 size={14} />
+                <span>Edit Profile</span>
+              </button>
+            )}
+            <button 
+              type="button" 
+              className="modal-close-btn" 
+              onClick={onClose}
+              aria-label="Close profile modal"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}

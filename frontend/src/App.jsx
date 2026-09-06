@@ -173,12 +173,15 @@ function MainAppShell() {
 
   // Toast Notification
   const [toast, setToast] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
 
   const showToast = useCallback((type, title, message) => {
     setToast({ type, title, message });
   }, []);
 
   const canCreateStaff = hasPermission('employees:create') || isSuperAdmin || isAdmin || isHR;
+  const canEditStaff = hasPermission('employees:update') || isSuperAdmin || isAdmin || isHR;
+  const canDeleteStaff = hasPermission('employees:delete') || isSuperAdmin || isAdmin || isHR;
   const canManageDepartments = hasPermission('departments:create') || isSuperAdmin || isAdmin || isHR;
   const canManageDesignations = hasPermission('designations:create') || isSuperAdmin || isAdmin || isHR;
 
@@ -572,6 +575,7 @@ function MainAppShell() {
   const handleConfirmDeleteEmployee = async () => {
     if (!employeeToDelete) return;
     setIsActionLoading(true);
+    setDeleteError(null);
 
     const empName = `${employeeToDelete.first_name} ${employeeToDelete.last_name || ''}`.trim();
     const empCode = employeeToDelete.employee_code;
@@ -585,6 +589,7 @@ function MainAppShell() {
           `Employee "${empName}" (${empCode}) was permanently removed.`
         );
         setEmployeeToDelete(null);
+        setDeleteError(null);
         fetchEmployeesData(true);
         fetchDepartmentsData(true);
       } else {
@@ -592,6 +597,7 @@ function MainAppShell() {
       }
     } catch (err) {
       console.error('Delete employee error:', err);
+      setDeleteError(err.message || 'Cannot permanently delete this employee because historical records or relationships exist.');
       showToast('error', 'Deletion Blocked', err.message);
     } finally {
       setIsActionLoading(false);
@@ -1117,10 +1123,10 @@ function MainAppShell() {
                     onViewEmployee={(emp) => setSelectedEmployeeId(emp.id)}
                     onEditEmployee={(emp) => { setEditingEmployee(emp); setIsAddEmployeeModalOpen(true); }}
                     onToggleStatus={(emp) => setEmployeeToToggleStatus(emp)}
-                    onDeleteEmployee={(emp) => setEmployeeToDelete(emp)}
-                    canEdit={canCreateStaff || isSuperAdmin || isAdmin || isHR}
-                    canDelete={isSuperAdmin || (isAdmin && hasPermission('employees:delete'))}
-                    canToggleStatus={canCreateStaff || isSuperAdmin || isAdmin || isHR}
+                    onDeleteEmployee={(emp) => { setDeleteError(null); setEmployeeToDelete(emp); }}
+                    canEdit={canEditStaff}
+                    canDelete={canDeleteStaff}
+                    canToggleStatus={canEditStaff}
                   />
                 )}
               </div>
@@ -1285,6 +1291,11 @@ function MainAppShell() {
         <EmployeeDetailModal
           employeeId={selectedEmployeeId}
           onClose={() => setSelectedEmployeeId(null)}
+          onEdit={(emp) => {
+            setSelectedEmployeeId(null);
+            setEditingEmployee(emp);
+            setIsAddEmployeeModalOpen(true);
+          }}
         />
       )}
 
@@ -1354,7 +1365,7 @@ function MainAppShell() {
 
       {/* Permanent Delete Confirmation Dialog */}
       {employeeToDelete && (
-        <div className="modal-backdrop" onClick={() => !isActionLoading && setEmployeeToDelete(null)}>
+        <div className="modal-backdrop" onClick={() => { if (!isActionLoading) { setEmployeeToDelete(null); setDeleteError(null); } }}>
           <div className="modal-container modal-dialog-confirm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-header-icon-title">
@@ -1373,7 +1384,7 @@ function MainAppShell() {
               <button
                 type="button"
                 className="modal-close-btn"
-                onClick={() => setEmployeeToDelete(null)}
+                onClick={() => { setEmployeeToDelete(null); setDeleteError(null); }}
                 disabled={isActionLoading}
               >
                 <X size={20} />
@@ -1384,31 +1395,60 @@ function MainAppShell() {
               <p className="dialog-explanation">
                 Are you sure you want to permanently delete <strong>{employeeToDelete.first_name} {employeeToDelete.last_name || ''}</strong> (<code>{employeeToDelete.employee_code}</code>) from the database?
               </p>
-              <div className="dialog-warning-card">
-                <AlertCircle size={18} className="warning-icon" />
-                <p className="warning-text">
-                  Permanent deletion is only permitted for test/accidental records without dependent historical data. If this employee is a Department Head, reports manager, or has payroll records, deletion will be safely rejected by the database.
-                </p>
-              </div>
+              
+              {deleteError ? (
+                <div style={{ padding: '12px 14px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: '#991b1b', fontSize: '0.85rem', lineHeight: '1.4' }}>
+                    <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <div>
+                      <strong>Permanent Deletion Blocked:</strong>
+                      <p style={{ margin: '4px 0 0 0' }}>{deleteError}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="dialog-warning-card">
+                  <AlertCircle size={18} className="warning-icon" />
+                  <p className="warning-text">
+                    Permanent deletion is only permitted for test/accidental records without dependent historical data. If this employee is a Department Head, reports manager, or has payroll records, deletion will be safely rejected by the database.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="modal-footer">
               <button
                 type="button"
                 className="btn btn-secondary"
-                onClick={() => setEmployeeToDelete(null)}
+                onClick={() => { setEmployeeToDelete(null); setDeleteError(null); }}
                 disabled={isActionLoading}
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                className="btn btn-danger"
-                onClick={handleConfirmDeleteEmployee}
-                disabled={isActionLoading}
-              >
-                {isActionLoading ? 'Deleting Record...' : 'Delete Permanently'}
-              </button>
+              {deleteError ? (
+                <button
+                  type="button"
+                  className="btn btn-warning"
+                  onClick={() => {
+                    const emp = employeeToDelete;
+                    setEmployeeToDelete(null);
+                    setDeleteError(null);
+                    setEmployeeToToggleStatus(emp);
+                  }}
+                  disabled={isActionLoading}
+                >
+                  Deactivate Instead (Recommended)
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={handleConfirmDeleteEmployee}
+                  disabled={isActionLoading}
+                >
+                  {isActionLoading ? 'Deleting Record...' : 'Delete Permanently'}
+                </button>
+              )}
             </div>
           </div>
         </div>

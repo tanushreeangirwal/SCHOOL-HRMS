@@ -42,7 +42,7 @@ export function AddEmployeeModal({
     first_name: employeeToEdit?.first_name || '',
     middle_name: employeeToEdit?.middle_name || '',
     last_name: employeeToEdit?.last_name || '',
-    date_of_birth: employeeToEdit?.date_of_birth ? employeeToEdit.date_of_birth.slice(0, 10) : '',
+    date_of_birth: employeeToEdit?.date_of_birth ? String(employeeToEdit.date_of_birth).slice(0, 10) : '',
     gender: employeeToEdit?.gender || 'Male',
     profile_photo_url: employeeToEdit?.profile_photo_url || '',
     
@@ -56,15 +56,47 @@ export function AddEmployeeModal({
     postal_code: employeeToEdit?.postal_code || '',
 
     // Employment details
-    joining_date: employeeToEdit?.joining_date ? employeeToEdit.joining_date.slice(0, 10) : new Date().toISOString().split('T')[0],
+    joining_date: employeeToEdit?.joining_date ? String(employeeToEdit.joining_date).slice(0, 10) : new Date().toISOString().split('T')[0],
     employment_status: employeeToEdit?.employment_status || 'Active',
     branch_id: employeeToEdit?.branch_id || '',
     department_id: employeeToEdit?.department_id || '',
     designation_id: employeeToEdit?.designation_id || '',
     employment_type_id: employeeToEdit?.employment_type_id || '',
     reporting_manager_id: employeeToEdit?.reporting_manager_id || '',
-    send_account_invitation: true
+    send_account_invitation: false
   });
+
+  // Re-synchronize form state if employeeToEdit prop changes
+  useEffect(() => {
+    if (employeeToEdit && employeeToEdit.id) {
+      setFormData({
+        employee_code: employeeToEdit.employee_code || '',
+        first_name: employeeToEdit.first_name || '',
+        middle_name: employeeToEdit.middle_name || '',
+        last_name: employeeToEdit.last_name || '',
+        date_of_birth: employeeToEdit.date_of_birth ? String(employeeToEdit.date_of_birth).slice(0, 10) : '',
+        gender: employeeToEdit.gender || 'Male',
+        profile_photo_url: employeeToEdit.profile_photo_url || '',
+        work_email: employeeToEdit.work_email || '',
+        personal_email: employeeToEdit.personal_email || '',
+        phone: employeeToEdit.phone || '',
+        address: employeeToEdit.address || '',
+        city: employeeToEdit.city || 'Pune',
+        state: employeeToEdit.state || 'Maharashtra',
+        postal_code: employeeToEdit.postal_code || '',
+        joining_date: employeeToEdit.joining_date ? String(employeeToEdit.joining_date).slice(0, 10) : new Date().toISOString().split('T')[0],
+        employment_status: employeeToEdit.employment_status || 'Active',
+        branch_id: employeeToEdit.branch_id || '',
+        department_id: employeeToEdit.department_id || '',
+        designation_id: employeeToEdit.designation_id || '',
+        employment_type_id: employeeToEdit.employment_type_id || '',
+        reporting_manager_id: employeeToEdit.reporting_manager_id || '',
+        send_account_invitation: false
+      });
+      setServerError(null);
+      setFieldErrors({});
+    }
+  }, [employeeToEdit]);
 
   // Load dropdown resources
   useEffect(() => {
@@ -80,7 +112,7 @@ export function AddEmployeeModal({
         if (desigRes && desigRes.data) setDesignations(desigRes.data);
         if (empRes && empRes.data) {
           // Exclude self from manager list in edit mode
-          const potentialManagers = isEditMode 
+          const potentialManagers = isEditMode && employeeToEdit?.id
             ? empRes.data.filter(e => e.id !== employeeToEdit.id)
             : empRes.data;
           setManagers(potentialManagers);
@@ -90,7 +122,7 @@ export function AddEmployeeModal({
       }
     }
     loadResources();
-  }, [isEditMode, employeeToEdit]);
+  }, [isEditMode, employeeToEdit?.id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -112,7 +144,7 @@ export function AddEmployeeModal({
   const validate = () => {
     const errors = {};
 
-    if (!formData.first_name.trim()) {
+    if (!formData.first_name || !formData.first_name.trim()) {
       errors.first_name = 'First name is required.';
     }
 
@@ -130,20 +162,21 @@ export function AddEmployeeModal({
     }
 
     setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    return errors;
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setServerError(null);
 
-    if (!validate()) {
+    const errors = validate();
+    if (Object.keys(errors).length > 0) {
       // Switch to tab with error
-      if (fieldErrors.first_name || fieldErrors.employee_code) {
+      if (errors.first_name || errors.employee_code) {
         setActiveTab('basic');
-      } else if (fieldErrors.work_email || fieldErrors.personal_email) {
+      } else if (errors.work_email || errors.personal_email) {
         setActiveTab('contact');
-      } else if (fieldErrors.employment_status) {
+      } else if (errors.employment_status) {
         setActiveTab('employment');
       }
       return;
@@ -177,9 +210,9 @@ export function AddEmployeeModal({
     }
   };
 
-  // Filter designations by selected department if applicable
+  // Filter designations by selected department if applicable, preserving current designation in edit mode
   const availableDesignations = formData.department_id
-    ? designations.filter(d => !d.department_id || d.department_id === formData.department_id)
+    ? designations.filter(d => !d.department_id || d.department_id === formData.department_id || (isEditMode && d.id === formData.designation_id))
     : designations;
 
   return (
@@ -588,7 +621,6 @@ export function AddEmployeeModal({
                     className="form-select"
                     value={formData.employment_status}
                     onChange={handleChange}
-                    required
                   >
                     <option value="Active">Active</option>
                     <option value="Probation">Probation</option>
@@ -620,13 +652,13 @@ export function AddEmployeeModal({
                     <input
                       type="checkbox"
                       name="send_account_invitation"
-                      checked={formData.send_account_invitation !== false}
+                      checked={formData.send_account_invitation}
                       onChange={(e) => setFormData(prev => ({ ...prev, send_account_invitation: e.target.checked }))}
-                      style={{ marginTop: '3px', width: '16px', height: '16px', accentColor: '#3155D9' }}
+                      style={{ marginTop: '3px', width: '16px', height: '16px', accentColor: '#16a34a' }}
                     />
                     <div>
-                      <span style={{ fontWeight: 700, fontSize: '0.86rem', color: '#166534', display: 'block' }}>
-                        Send Account Onboarding Invitation
+                      <span style={{ fontWeight: 600, fontSize: '0.88rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Sparkles size={14} /> Send Account Invitation & Onboarding Link
                       </span>
                       <span style={{ fontSize: '0.76rem', color: '#15803d', lineHeight: 1.4, display: 'block', marginTop: '2px' }}>
                         Dispatches a secure activation link to the employee's email. They will verify their email & phone number and create their own password.
@@ -666,36 +698,37 @@ export function AddEmployeeModal({
                 Cancel
               </button>
 
-              {activeTab !== 'employment' ? (
+              {activeTab !== 'employment' && (
                 <button
                   type="button"
-                  className="btn btn-primary"
+                  className="btn btn-secondary"
                   onClick={() => {
                     if (activeTab === 'basic') setActiveTab('contact');
                     else if (activeTab === 'contact') setActiveTab('employment');
                   }}
+                  disabled={isSubmitting}
                 >
                   Next Step
                 </button>
-              ) : (
-                <button
-                  type="submit"
-                  className="btn btn-primary btn-submit"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={16} className="spin-animation" />
-                      <span>{isEditMode ? 'Saving Changes...' : 'Creating Record...'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check size={16} />
-                      <span>{isEditMode ? 'Save Changes' : 'Register Staff Member'}</span>
-                    </>
-                  )}
-                </button>
               )}
+
+              <button
+                type="submit"
+                className="btn btn-primary btn-submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={16} className="spin-animation" />
+                    <span>{isEditMode ? 'Saving Changes...' : 'Creating Record...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={16} />
+                    <span>{isEditMode ? 'Save Changes' : 'Register Staff Member'}</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </form>
