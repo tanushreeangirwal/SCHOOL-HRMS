@@ -377,7 +377,7 @@ export function DashboardView({
           <div className="welcome-text-container">
             <div className="welcome-tag">
               <Sparkles size={14} />
-              <span>👑 Super Admin • Principal Portal</span>
+              <span>Super Admin • Principal Portal</span>
             </div>
 
             <h2 className="welcome-title">
@@ -669,7 +669,7 @@ export function DashboardView({
           <div className="welcome-text-container">
             <div className="welcome-tag">
               <ShieldCheck size={14} />
-              <span>🏛️ Administrative Operations Control</span>
+              <span>Administrative Operations Control</span>
             </div>
 
             <h2 className="welcome-title">
@@ -1146,7 +1146,7 @@ export function DashboardView({
           <div className="welcome-text-container">
             <div className="welcome-tag">
               <Building2 size={14} />
-              <span>🎓 Department Leadership • Head of Department</span>
+              <span>Department Leadership • Head of Department</span>
             </div>
 
             <h2 className="welcome-title">
