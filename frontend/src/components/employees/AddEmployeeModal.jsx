@@ -11,7 +11,9 @@ import {
   Sparkles,
   Loader2,
   Building2,
-  Shield
+  Shield,
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
 import { hrmsApi } from '../../services/api';
 
@@ -256,6 +258,49 @@ export function AddEmployeeModal({
             <div className="alert-text">
               <strong>Error:</strong> {serverError}
             </div>
+          </div>
+        )}
+
+        {/* Bulk Onboarding Excel Template Callout */}
+        {!isEditMode && (
+          <div style={{
+            margin: '0 24px 16px 24px',
+            padding: '10px 14px',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileSpreadsheet size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.81rem', color: '#166534' }}>
+                <strong>Need to onboard multiple faculty at once?</strong> Download our verified Excel template.
+              </span>
+            </div>
+            <a 
+              href="/Employee_Onboarding_Template.xlsx" 
+              download="Employee_Onboarding_Template.xlsx"
+              style={{
+                padding: '5px 12px',
+                backgroundColor: '#16a34a',
+                color: '#ffffff',
+                borderRadius: '6px',
+                fontWeight: '600',
+                textDecoration: 'none',
+                fontSize: '0.78rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
+              }}
+            >
+              <Download size={13} />
+              <span>Download Excel</span>
+            </a>
           </div>
         )}
 

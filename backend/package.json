@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node scripts/test_rbac_auth.js"
+    "test": "node scripts/test_rbac_auth.js",
+    "template:staff": "node scripts/generate_employee_onboarding_template.js",
+    "import:staff": "node scripts/import_employees_from_excel.js"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +24,7 @@
     "jsonwebtoken": "^9.0.3",
     "otplib": "^13.5.0",
     "pg": "^8.23.0",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "xlsx": "^0.18.5"
   }
 }
