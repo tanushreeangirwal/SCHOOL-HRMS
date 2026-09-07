@@ -10,80 +10,69 @@ import {
   EyeOff, 
   KeyRound,
   ArrowLeft,
-  Users,
   CheckCircle2,
   Shield,
   UserCheck,
   Briefcase,
   GraduationCap,
-  Sparkles,
-  Zap,
-  Check
+  ClipboardCheck,
+  CalendarDays,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import StVincentsLogo from '../common/StVincentsLogo';
 
-// 5 RBAC demo roles with realistic, distinct demo personnel
+// 5 RBAC demo roles matching the institutional showcase
 const DEMO_ROLES = [
   {
     id: 'superadmin',
     role: 'Super Admin',
     name: 'Dr. Alistair Sterling',
-    designation: 'Principal & Executive Head of Institution',
+    designation: 'Principal & Executive Head',
     email: 'principal@school.edu',
     password: 'SchoolDemo@2026',
     code: 'EMP-1005',
-    badgeClass: 'badge-superadmin',
-    icon: ShieldCheck,
-    isTopTier: true
+    icon: ShieldCheck
   },
   {
     id: 'admin',
     role: 'Administrator',
-    name: 'Malcolm Hayes',
-    designation: 'Campus Operations & Institutional Dean',
+    name: 'Malcolm Haynes',
+    designation: 'Campus Operations & Dean',
     email: 'admin@school.edu',
     password: 'SchoolDemo@2026',
     code: 'EMP-1006',
-    badgeClass: 'badge-admin',
-    icon: Shield,
-    isTopTier: false
+    icon: Shield
   },
   {
     id: 'hr',
     role: 'HR',
     name: 'Clara Higgins',
-    designation: 'Head of Human Resources & Talent',
+    designation: 'Head of Human Resources',
     email: 'hr@school.edu',
     password: 'SchoolDemo@2026',
     code: 'EMP-1003',
-    badgeClass: 'badge-hr',
-    icon: UserCheck,
-    isTopTier: false
+    icon: UserCheck
   },
   {
     id: 'manager',
     role: 'Manager',
     name: 'Julian Mercer',
-    designation: 'Academic Wing & Department Lead',
+    designation: 'Department Lead',
     email: 'manager@school.edu',
     password: 'SchoolDemo@2026',
     code: 'EMP-1002',
-    badgeClass: 'badge-manager',
-    icon: Briefcase,
-    isTopTier: false
+    icon: Briefcase
   },
   {
     id: 'employee',
     role: 'Employee',
     name: 'Evelyn Reed',
-    designation: 'Senior Faculty & High School Educator',
+    designation: 'Senior Faculty Educator',
     email: 'teacher@school.edu',
     password: 'SchoolDemo@2026',
     code: 'EMP-1001',
-    badgeClass: 'badge-employee',
-    icon: GraduationCap,
-    isTopTier: false
+    icon: GraduationCap
   }
 ];
 
@@ -95,7 +84,6 @@ export function LoginView({ onLoginSuccess }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittingRoleId, setSubmittingRoleId] = useState(null);
   const [selectedRoleId, setSelectedRoleId] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
 
@@ -140,30 +128,12 @@ export function LoginView({ onLoginSuccess }) {
     setErrorMessage(null);
   };
 
-  // 1-Click Quick Login as Demo Role
-  const handleQuickLogin = async (e, demo) => {
-    if (e && e.stopPropagation) e.stopPropagation();
-    setIdentifier(demo.email);
-    setPassword(demo.password);
-    setSelectedRoleId(demo.id);
-    setErrorMessage(null);
-    setIsSubmitting(true);
-    setSubmittingRoleId(demo.id);
-
-    try {
-      const result = await login(demo.email, demo.password);
-      if (result.require2fa) {
-        setTempToken(result.tempToken);
-        setIs2FAStage(true);
-      } else {
-        if (onLoginSuccess) onLoginSuccess(result.user);
-      }
-    } catch (err) {
-      console.error('Quick login error:', err);
-      setErrorMessage(err.message || 'Login failed. Please check credentials.');
-    } finally {
-      setIsSubmitting(false);
-      setSubmittingRoleId(null);
+  // Quick fill principal
+  const handleFillPrincipal = (e) => {
+    e.preventDefault();
+    const principal = DEMO_ROLES.find(r => r.id === 'superadmin');
+    if (principal) {
+      handleSelectDemo(principal);
     }
   };
 
@@ -192,21 +162,69 @@ export function LoginView({ onLoginSuccess }) {
   };
 
   return (
-    <div className="login-screen-wrapper">
-      <div className="login-container">
-        {/* Top Institutional Branding Header */}
-        <div className="login-brand-header">
-          <StVincentsLogo 
-            variant="full" 
-            size="xl" 
-            title="St. Vincent's High School"
-            subtitle="Human Resource Management System" 
-            theme="light"
-          />
-        </div>
+    <div className="split-login-wrapper">
+      {/* Left Column: Institutional Brand & Features Showcase */}
+      <div className="split-login-left">
+        <div className="split-login-left-inner">
+          {/* Top Brand Header */}
+          <div className="split-login-brand">
+            <StVincentsLogo 
+              variant="horizontal" 
+              size={46}
+              title="St. Vincent's High School"
+              subtitle="HUMAN RESOURCE MANAGEMENT SYSTEM" 
+              theme="light"
+            />
+          </div>
 
-        {/* Main Sign-In Card */}
-        <div className="login-card">
+          {/* Hero Content */}
+          <div className="split-login-hero">
+            <h1 className="split-login-headline">
+              One record for every<br />member of staff.
+            </h1>
+            <p className="split-login-subline">
+              Attendance, leave, payroll, shifts and professional development — kept together, for the people who run the school.
+            </p>
+
+            {/* Feature Bullets */}
+            <ul className="split-login-features" aria-label="System capabilities">
+              <li className="split-feature-item">
+                <span className="split-feature-icon-wrap">
+                  <ClipboardCheck size={17} className="split-feature-icon" />
+                </span>
+                <span className="split-feature-text">Daily attendance against each teacher's roster</span>
+              </li>
+              <li className="split-feature-item">
+                <span className="split-feature-icon-wrap">
+                  <CalendarDays size={17} className="split-feature-icon" />
+                </span>
+                <span className="split-feature-text">Leave requests routed to the right approver</span>
+              </li>
+              <li className="split-feature-item">
+                <span className="split-feature-icon-wrap">
+                  <CreditCard size={17} className="split-feature-icon" />
+                </span>
+                <span className="split-feature-text">Monthly payroll with loss-of-pay worked out</span>
+              </li>
+              <li className="split-feature-item">
+                <span className="split-feature-icon-wrap">
+                  <GraduationCap size={17} className="split-feature-icon" />
+                </span>
+                <span className="split-feature-text">Training hours and certificates on file</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Left Footer Landmark */}
+          <div className="split-login-left-footer">
+            <span>ST. VINCENT'S HIGH SCHOOL • PUNE</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column: Authentication Card & Role Selector */}
+      <div className="split-login-right">
+        <div className="split-login-form-container">
           {/* Error Alert */}
           {errorMessage && (
             <div className="login-error-alert" role="alert">
@@ -218,12 +236,12 @@ export function LoginView({ onLoginSuccess }) {
           {/* STAGE 1: Standard Credentials Form */}
           {!is2FAStage ? (
             <>
-              <form onSubmit={handleCredentialSubmit} className="login-form">
-                <div className="login-form-header">
-                  <h2 className="login-form-title">Staff Portal Sign In</h2>
-                  <p className="login-form-subtitle">Enter your institutional credentials to access your account</p>
-                </div>
+              <div className="split-form-header">
+                <h2 className="split-form-title">Staff Portal Sign In</h2>
+                <p className="split-form-subtitle">Enter your institutional credentials to access your account</p>
+              </div>
 
+              <form onSubmit={handleCredentialSubmit} className="split-login-form">
                 {/* Email / Username Input */}
                 <div className="login-field-group">
                   <label className="login-field-label" htmlFor="login-identifier">
@@ -250,11 +268,9 @@ export function LoginView({ onLoginSuccess }) {
 
                 {/* Password Input */}
                 <div className="login-field-group">
-                  <div className="login-field-header">
-                    <label className="login-field-label" htmlFor="login-password">
-                      Password
-                    </label>
-                  </div>
+                  <label className="login-field-label" htmlFor="login-password">
+                    Password
+                  </label>
                   <div className="login-input-wrapper">
                     <Lock className="login-input-icon" size={17} />
                     <input
@@ -282,10 +298,10 @@ export function LoginView({ onLoginSuccess }) {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  className="btn-login-action"
+                  className="btn-split-submit"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting && !submittingRoleId ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 size={18} className="spin-animation" />
                       <span>Verifying Credentials...</span>
@@ -299,113 +315,58 @@ export function LoginView({ onLoginSuccess }) {
                 </button>
               </form>
 
-              {/* Demo Accounts Quick-Select & Credentials Section */}
-              <div className="login-demo-section">
-                <div className="login-demo-header-wrap">
-                  <div className="login-demo-header">
-                    <Sparkles size={14} className="text-amber-500" />
-                    <span>Demo Role Access • Select to Auto-Fill & Test</span>
-                  </div>
-                  <p className="login-demo-subtitle">
-                    Quick demo access configured for institutional evaluation across all 5 RBAC tiers:
-                  </p>
+              {/* Evaluation Access Role Selector Grid */}
+              <div className="split-eval-section">
+                <div className="split-eval-header">
+                  <span className="split-eval-title">EVALUATION ACCESS</span>
+                  <span className="split-eval-hint">Pick a role to sign in</span>
                 </div>
 
-                <div className="login-demo-grid">
+                <div className="split-eval-grid">
                   {DEMO_ROLES.map((demo) => {
                     const IconComp = demo.icon;
                     const isSelected = selectedRoleId === demo.id || identifier.toLowerCase() === demo.email.toLowerCase();
-                    const isLoggingInThis = isSubmitting && submittingRoleId === demo.id;
 
                     return (
-                      <div
+                      <button
                         key={demo.id}
-                        className={`login-demo-pill ${demo.isTopTier ? 'top-tier' : ''} ${isSelected ? 'selected' : ''}`}
+                        type="button"
+                        className={`split-eval-card ${isSelected ? 'selected' : ''}`}
                         onClick={() => handleSelectDemo(demo)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleSelectDemo(demo);
-                          }
-                        }}
                       >
-                        <div>
-                          <div className="login-demo-pill-top">
-                            <div className="login-demo-badge-wrap">
-                              <span className={`demo-badge ${demo.badgeClass}`}>
-                                <IconComp size={12} />
-                                <span>{demo.role}</span>
-                              </span>
-                            </div>
-                            {isSelected && (
-                              <span className="demo-active-check">
-                                <Check size={13} /> Selected
-                              </span>
-                            )}
-                          </div>
-
-                          <h4 className="login-demo-name">{demo.name}</h4>
-                          <p className="login-demo-desc">{demo.designation}</p>
-
-                          <div className="login-demo-creds-box">
-                            <div className="login-demo-cred-row">
-                              <span className="login-demo-cred-label">Email:</span>
-                              <span className="login-demo-cred-val">{demo.email}</span>
-                            </div>
-                            <div className="login-demo-cred-row">
-                              <span className="login-demo-cred-label">Password:</span>
-                              <span className="login-demo-cred-val">{demo.password}</span>
-                            </div>
-                          </div>
+                        <div className="split-eval-card-icon">
+                          <IconComp size={16} />
                         </div>
-
-                        <div className="login-demo-actions">
-                          <button
-                            type="button"
-                            className="btn-demo-autofill"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelectDemo(demo);
-                            }}
-                          >
-                            <span>Auto-Fill</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-demo-quicklogin"
-                            disabled={isSubmitting}
-                            onClick={(e) => handleQuickLogin(e, demo)}
-                          >
-                            {isLoggingInThis ? (
-                              <>
-                                <Loader2 size={13} className="spin-animation" />
-                                <span>Signing in...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Zap size={13} />
-                                <span>Quick Login</span>
-                              </>
-                            )}
-                          </button>
+                        <div className="split-eval-card-info">
+                          <span className="split-eval-card-role">{demo.role}</span>
+                          <span className="split-eval-card-name">{demo.name}</span>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
+                </div>
+
+                {/* Quick Link to Principal */}
+                <div className="split-quick-link-wrap">
+                  <a 
+                    href="#fill-principal" 
+                    className="split-quick-link"
+                    onClick={handleFillPrincipal}
+                  >
+                    Or fill the form with the Principal's credentials
+                  </a>
                 </div>
               </div>
             </>
           ) : (
             /* STAGE 2: 2FA Code Input */
-            <form onSubmit={handle2FASubmit} className="login-form">
-              <div className="login-form-header">
+            <form onSubmit={handle2FASubmit} className="split-login-form">
+              <div className="split-form-header">
                 <div className="two-factor-icon-badge">
                   <ShieldCheck size={28} />
                 </div>
-                <h2 className="login-form-title">Two-Factor Authentication</h2>
-                <p className="login-form-subtitle">
+                <h2 className="split-form-title">Two-Factor Authentication</h2>
+                <p className="split-form-subtitle">
                   Enter the 6-digit verification code from your authenticator app.
                 </p>
               </div>
@@ -434,7 +395,7 @@ export function LoginView({ onLoginSuccess }) {
               <div className="two-factor-actions">
                 <button
                   type="submit"
-                  className="btn-login-action"
+                  className="btn-split-submit"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -466,12 +427,12 @@ export function LoginView({ onLoginSuccess }) {
               </div>
             </form>
           )}
-        </div>
 
-        {/* Institutional Footer */}
-        <footer className="login-page-footer">
-          <p>© 2026 St. Vincent's High School, Pune • Human Resource Management System</p>
-        </footer>
+          {/* Institutional Footer */}
+          <footer className="split-login-footer">
+            <p>© 2026 St. Vincent's High School, Pune • Human Resource Management System</p>
+          </footer>
+        </div>
       </div>
     </div>
   );
