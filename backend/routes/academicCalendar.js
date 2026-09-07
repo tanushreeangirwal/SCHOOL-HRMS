@@ -171,13 +171,13 @@ router.get('/overview', authenticateToken, async (req, res) => {
     // 3. Get Upcoming Holiday / School Closure
     const upcomingHolidayRes = await pool.query(`
       SELECT 
-        id, title, event_type, category, start_date, end_date, start_time, end_time, total_days, description,
-        (start_date - $1::date) AS days_remaining
-      FROM calendar_events
-      WHERE end_date >= $1::date
-        AND is_active = true
-        AND event_type IN ('Holiday', 'School Closure')
-      ORDER BY start_date ASC
+        e.*,
+        (e.start_date::date - $1::date) AS days_remaining
+      FROM calendar_events e
+      WHERE e.end_date >= $1::date
+        AND e.is_active = true
+        AND e.event_type IN ('Holiday', 'School Closure')
+      ORDER BY e.start_date ASC
       LIMIT 1;
     `, [todayStr]);
     const upcomingHoliday = upcomingHolidayRes.rows[0] || null;
@@ -254,14 +254,14 @@ router.get('/overview', authenticateToken, async (req, res) => {
       todayStatusLabel = `Non-Instructional — ${nonInstEvent.title}`;
     }
 
-    // 6. Next 5 Upcoming Events
+    // 6. Next 8 Upcoming Events
     const nextEventsRes = await pool.query(`
       SELECT 
-        id, title, event_type, category, start_date, end_date, start_time, end_time, total_days, description,
-        (start_date - $1::date) AS days_remaining
-      FROM calendar_events
-      WHERE end_date >= $1::date AND is_active = true
-      ORDER BY start_date ASC
+        e.*,
+        (e.start_date::date - $1::date) AS days_remaining
+      FROM calendar_events e
+      WHERE e.end_date >= $1::date AND e.is_active = true
+      ORDER BY e.start_date ASC
       LIMIT 8;
     `, [todayStr]);
 

@@ -54,16 +54,21 @@ export function CalendarOverviewView({
     setError(null);
 
     try {
-      const [overviewRes, monthRes] = await Promise.all([
+      const [overviewResult, monthResult] = await Promise.allSettled([
         hrmsApi.getCalendarOverview(),
         hrmsApi.getCalendarMonth(currentYear, currentMonth)
       ]);
 
-      if (overviewRes && overviewRes.success) {
-        setOverviewData(overviewRes.data);
+      if (overviewResult.status === 'fulfilled' && overviewResult.value?.success) {
+        setOverviewData(overviewResult.value.data);
+      } else if (overviewResult.status === 'rejected') {
+        console.warn('Calendar overview notice:', overviewResult.reason?.message || overviewResult.reason);
       }
-      if (monthRes && monthRes.success) {
-        setMonthData(monthRes.data);
+
+      if (monthResult.status === 'fulfilled' && monthResult.value?.success) {
+        setMonthData(monthResult.value.data);
+      } else if (monthResult.status === 'rejected') {
+        console.warn('Calendar month notice:', monthResult.reason?.message || monthResult.reason);
       }
     } catch (err) {
       console.error('Failed to load calendar data:', err);
@@ -116,16 +121,153 @@ export function CalendarOverviewView({
     setIsDayModalOpen(true);
   };
 
-  // Compute first day of week offset for grid
+  // Deterministic day grid: Uses monthData from API if available; otherwise dynamically generates the month days so calendar is ALWAYS visible
+  const displayDays = useMemo(() => {
+    if (monthData && Array.isArray(monthData.days) && monthData.days.length > 0) {
+      return monthData.days;
+    }
+
+    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const generated = [];
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dObj = new Date(currentYear, currentMonth - 1, d);
+      const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dow = dObj.getDay(); // 0 = Sunday, 6 = Saturday
+      const isSunday = dow === 0;
+
+      // Check if any events in monthData or overview apply to this date
+      const allKnownEvents = [...(monthData?.events || []), ...(overviewData?.upcoming_events || [])];
+      const dayEvents = allKnownEvents.filter(e => {
+        const start = e.start_date ? e.start_date.split('T')[0] : '';
+        const end = e.end_date ? e.end_date.split('T')[0] : '';
+        return dateStr >= start && dateStr <= end;
+      });
+
+      const holiday = dayEvents.find(e => e.event_type === 'Holiday');
+      const closure = dayEvents.find(e => e.event_type === 'School Closure');
+      const nonInst = dayEvents.find(e => e.event_type === 'Non-Instructional');
+      const override = dayEvents.find(e => e.event_type === 'Working Day Override');
+
+      let isWorking = !isSunday;
+      let dayType = isSunday ? 'Weekly Off' : 'Working Day';
+
+      if (closure) {
+        isWorking = false;
+        dayType = 'School Closure';
+      } else if (holiday) {
+        isWorking = false;
+        dayType = 'Holiday';
+      } else if (override) {
+        isWorking = true;
+        dayType = 'Working Day Override';
+      } else if (nonInst) {
+        isWorking = nonInst.is_working_day !== false;
+        dayType = 'Non-Instructional';
+      }
+
+      generated.push({
+        date: dateStr,
+        day_number: d,
+        day_of_week: dow,
+        is_today: dateStr === todayStr,
+        is_working_day: isWorking,
+        day_type: dayType,
+        term_name: overviewData?.active_term?.name || 'Term 1',
+        events: dayEvents
+      });
+    }
+
+    return generated;
+  }, [monthData, currentYear, currentMonth, overviewData]);
+
+  // Compute first day of week offset for grid (0=Sun, 1=Mon ... 6=Sat)
   const monthStartOffset = useMemo(() => {
-    if (!monthData || !monthData.days || monthData.days.length === 0) return 0;
-    return monthData.days[0].day_of_week; // 0=Sun, 1=Mon ...
-  }, [monthData]);
+    if (displayDays && displayDays.length > 0) {
+      return displayDays[0].day_of_week;
+    }
+    return new Date(currentYear, currentMonth - 1, 1).getDay();
+  }, [displayDays, currentYear, currentMonth]);
 
   const monthName = useMemo(() => {
     const d = new Date(currentYear, currentMonth - 1, 1);
     return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }, [currentYear, currentMonth]);
+
+  const workingDaysComputed = useMemo(() => {
+    return displayDays.filter(d => d.is_working_day).length;
+  }, [displayDays]);
+
+  const totalDaysInMonth = useMemo(() => {
+    return displayDays.length;
+  }, [displayDays]);
+
+  const upcomingHolidayComputed = useMemo(() => {
+    if (overviewData?.upcoming_holiday) return overviewData.upcoming_holiday;
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
+    const allEvents = monthData?.events || displayDays.flatMap(d => d.events || []);
+    const holidays = allEvents
+      .filter(e => (e.event_type === 'Holiday' || e.event_type === 'School Closure') && (e.end_date ? e.end_date.split('T')[0] >= todayStr : true))
+      .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+    
+    if (holidays.length > 0) {
+      const h = holidays[0];
+      const start = h.start_date ? h.start_date.split('T')[0] : todayStr;
+      const daysRem = Math.max(0, Math.ceil((new Date(start) - new Date(todayStr)) / (1000 * 60 * 60 * 24)));
+      return {
+        ...h,
+        days_remaining: daysRem
+      };
+    }
+    return null;
+  }, [overviewData, monthData, displayDays]);
+
+  const todayStatus = useMemo(() => {
+    if (overviewData?.today_status) return overviewData.today_status;
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const todayDayObj = displayDays.find(d => d.is_today);
+    const dayOfWeek = today.getDay();
+    const isWorking = todayDayObj ? todayDayObj.is_working_day : dayOfWeek !== 0;
+    return {
+      date: todayStr,
+      day_name: today.toLocaleDateString('en-US', { weekday: 'long' }),
+      formatted_date: today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      is_working_day: isWorking,
+      status_label: todayDayObj?.day_type || (isWorking ? 'Normal Working Day' : (dayOfWeek === 0 ? 'Weekly Off (Sunday)' : 'Holiday / Closed')),
+      term_name: overviewData?.active_term?.name || 'Term 1 (Monsoon Term)'
+    };
+  }, [overviewData, displayDays]);
+
+  const upcomingEventsList = useMemo(() => {
+    if (overviewData?.upcoming_events && overviewData.upcoming_events.length > 0) {
+      return overviewData.upcoming_events;
+    }
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const allEvents = monthData?.events || displayDays.flatMap(d => d.events || []);
+    
+    const uniqueMap = new Map();
+    allEvents.forEach(ev => {
+      const end = ev.end_date ? ev.end_date.split('T')[0] : '';
+      if (end >= todayStr && (!ev.id || !uniqueMap.has(ev.id))) {
+        const start = ev.start_date ? ev.start_date.split('T')[0] : todayStr;
+        const daysRem = Math.max(0, Math.ceil((new Date(start) - new Date(todayStr)) / (1000 * 60 * 60 * 24)));
+        uniqueMap.set(ev.id || ev.title, {
+          ...ev,
+          days_remaining: daysRem
+        });
+      }
+    });
+
+    return Array.from(uniqueMap.values())
+      .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+      .slice(0, 8);
+  }, [overviewData, monthData, displayDays]);
 
   return (
     <div className="calendar-overview-view">
@@ -173,14 +315,14 @@ export function CalendarOverviewView({
             <span className="stat-title">Upcoming Holiday</span>
             <div className="stat-number-wrapper">
               <span className="stat-number" style={{ fontSize: '1.05rem', color: '#172033', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {overviewData?.upcoming_holiday?.title || 'None upcoming'}
+                {overviewData?.upcoming_holiday?.title || upcomingHolidayComputed?.title || 'None upcoming'}
               </span>
             </div>
             <span className="stat-subtext" style={{ color: '#be123c', fontWeight: 600 }}>
-              {overviewData?.upcoming_holiday ? (
-                overviewData.upcoming_holiday.days_remaining === 0 ? 'Today' :
-                overviewData.upcoming_holiday.days_remaining === 1 ? 'Tomorrow' :
-                `${overviewData.upcoming_holiday.days_remaining} days away`
+              {(overviewData?.upcoming_holiday || upcomingHolidayComputed) ? (
+                (overviewData?.upcoming_holiday || upcomingHolidayComputed).days_remaining === 0 ? 'Today' :
+                (overviewData?.upcoming_holiday || upcomingHolidayComputed).days_remaining === 1 ? 'Tomorrow' :
+                `${(overviewData?.upcoming_holiday || upcomingHolidayComputed).days_remaining} days away`
               ) : 'School in session'}
             </span>
           </div>
@@ -192,14 +334,14 @@ export function CalendarOverviewView({
         {/* KPI 4: Working Days This Month */}
         <div className="stat-card stat-emerald">
           <div className="stat-content">
-            <span className="stat-title">Working Days ({new Date().toLocaleDateString('en-US', { month: 'short' })})</span>
+            <span className="stat-title">Working Days ({new Date(currentYear, currentMonth - 1, 1).toLocaleDateString('en-US', { month: 'short' })})</span>
             <div className="stat-number-wrapper">
               <span className="stat-number text-emerald">
-                {overviewData?.working_days_this_month ?? '—'}
+                {overviewData?.working_days_this_month ?? workingDaysComputed}
               </span>
             </div>
             <span className="stat-subtext">
-              Out of {overviewData?.total_days_in_month ?? 30} calendar days
+              Out of {overviewData?.total_days_in_month ?? totalDaysInMonth} calendar days
             </span>
           </div>
           <div className="stat-icon-badge">
@@ -209,7 +351,7 @@ export function CalendarOverviewView({
       </div>
 
       {/* 2. TODAY STATUS BANNER */}
-      {overviewData?.today_status && (
+      {todayStatus && (
         <div style={{
           backgroundColor: '#ffffff',
           borderRadius: '12px',
@@ -228,8 +370,8 @@ export function CalendarOverviewView({
               width: '42px',
               height: '42px',
               borderRadius: '10px',
-              backgroundColor: overviewData.today_status.is_working_day ? '#ecfdf5' : '#fff1f2',
-              color: overviewData.today_status.is_working_day ? '#059669' : '#e11d48',
+              backgroundColor: todayStatus.is_working_day ? '#ecfdf5' : '#fff1f2',
+              color: todayStatus.is_working_day ? '#059669' : '#e11d48',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -240,21 +382,21 @@ export function CalendarOverviewView({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b' }}>
-                  Today — {overviewData.today_status.day_name}
+                  Today — {todayStatus.day_name}
                 </span>
                 <span style={{
                   fontSize: '0.72rem',
                   fontWeight: 700,
                   padding: '2px 8px',
                   borderRadius: '12px',
-                  backgroundColor: overviewData.today_status.is_working_day ? '#dcfce7' : '#fee2e2',
-                  color: overviewData.today_status.is_working_day ? '#15803d' : '#b91c1c'
+                  backgroundColor: todayStatus.is_working_day ? '#dcfce7' : '#fee2e2',
+                  color: todayStatus.is_working_day ? '#15803d' : '#b91c1c'
                 }}>
-                  {overviewData.today_status.status_label}
+                  {todayStatus.status_label}
                 </span>
               </div>
               <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
-                {overviewData.today_status.formatted_date} • {overviewData.today_status.term_name}
+                {todayStatus.formatted_date} • {todayStatus.term_name}
               </div>
             </div>
           </div>
@@ -370,7 +512,7 @@ export function CalendarOverviewView({
               </div>
 
               {/* Calendar Grid Matrix */}
-              {isLoading ? (
+              {isLoading && !displayDays.length ? (
                 <div style={{ padding: '40px', textAlign: 'center' }}>
                   <LoadingSpinner text="Rendering school calendar matrix..." />
                 </div>
@@ -384,41 +526,42 @@ export function CalendarOverviewView({
                 }}>
                   {/* Blank cells for start offset */}
                   {Array.from({ length: monthStartOffset }).map((_, i) => (
-                    <div key={`empty-${i}`} style={{ backgroundColor: '#fafbfc' }} />
+                    <div key={`empty-start-${i}`} style={{ backgroundColor: '#fafbfc', minHeight: '92px' }} />
                   ))}
 
-              {/* Month Days */}
-              {monthData?.days?.map((day) => {
-                const isSunday = day.day_of_week === 0;
-                const isToday = day.is_today;
-                const hasEvents = day.events && day.events.length > 0;
-                const hasHoliday = day.events && day.events.some(e => e.event_type === 'Holiday');
-                const hasClosure = day.events && day.events.some(e => e.event_type === 'School Closure');
-                const hasNonInst = day.events && day.events.some(e => e.event_type === 'Non-Instructional');
-                const hasOverride = day.events && day.events.some(e => e.event_type === 'Working Day Override');
+                  {/* Month Days */}
+                  {displayDays.map((day) => {
+                    const isSunday = day.day_of_week === 0;
+                    const isToday = day.is_today;
+                    const hasEvents = day.events && day.events.length > 0;
+                    const hasHoliday = day.events && day.events.some(e => e.event_type === 'Holiday');
+                    const hasClosure = day.events && day.events.some(e => e.event_type === 'School Closure');
+                    const hasNonInst = day.events && day.events.some(e => e.event_type === 'Non-Instructional');
+                    const hasOverride = day.events && day.events.some(e => e.event_type === 'Working Day Override');
 
-                let cellBg = '#ffffff';
-                if (isToday) cellBg = '#f0f9ff';
-                else if (hasHoliday || hasClosure) cellBg = '#fffafb';
-                else if (isSunday) cellBg = '#fafbfc';
+                    let cellBg = '#ffffff';
+                    if (isToday) cellBg = '#f0f9ff';
+                    else if (hasHoliday || hasClosure) cellBg = '#fffafb';
+                    else if (isSunday) cellBg = '#fafbfc';
 
-                return (
-                  <div
-                    key={day.date}
-                    onClick={() => handleDayClick(day)}
-                    style={{
-                      backgroundColor: cellBg,
-                      padding: '8px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      transition: 'background-color 0.15s ease',
-                      border: isToday ? '2px solid #38bdf8' : 'none',
-                      position: 'relative'
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = isToday ? '#e0f2fe' : '#f1f5f9'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = cellBg}
-                  >
+                    return (
+                      <div
+                        key={day.date}
+                        onClick={() => handleDayClick(day)}
+                        style={{
+                          backgroundColor: cellBg,
+                          padding: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          minHeight: '92px',
+                          transition: 'background-color 0.15s ease',
+                          border: isToday ? '2px solid #38bdf8' : 'none',
+                          position: 'relative'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = isToday ? '#e0f2fe' : '#f1f5f9'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = cellBg}
+                      >
                     {/* Day Number Row */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                       <span style={{
@@ -487,8 +630,13 @@ export function CalendarOverviewView({
                   </div>
                 );
               })}
-            </div>
-          )}
+
+                {/* Trailing empty cells to fill the final week row */}
+                {Array.from({ length: (7 - ((monthStartOffset + displayDays.length) % 7)) % 7 }).map((_, i) => (
+                  <div key={`empty-end-${i}`} style={{ backgroundColor: '#fafbfc', minHeight: '92px' }} />
+                ))}
+              </div>
+            )}
             </div>
           </div>
 
@@ -558,12 +706,12 @@ export function CalendarOverviewView({
           </div>
 
           <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {overviewData?.upcoming_events?.length === 0 ? (
+            {upcomingEventsList.length === 0 ? (
               <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.84rem' }}>
                 No upcoming events scheduled in this term.
               </div>
             ) : (
-              overviewData?.upcoming_events?.slice(0, 7).map((ev) => {
+              upcomingEventsList.slice(0, 7).map((ev) => {
                 const startDateObj = new Date(ev.start_date);
                 const monthShort = startDateObj.toLocaleDateString('en-US', { month: 'short' });
                 const dayNum = startDateObj.getDate();

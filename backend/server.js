@@ -95,8 +95,12 @@ async function ensureSchemaUpdates() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_otp_attempts INT DEFAULT 0;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_otp_last_sent_at TIMESTAMP;
       UPDATE users SET account_status = 'ACTIVE' WHERE account_status IS NULL;
+
+      -- Ensure calendar_events has time support
+      ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS start_time VARCHAR(20);
+      ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS end_time VARCHAR(20);
     `);
-    console.log("Database user schema auto-migration verified successfully.");
+    console.log("Database user & calendar schema auto-migration verified successfully.");
 
     // Ensure Training Module tables, permissions, and initial 3 programs exist
     await ensureTrainingModuleSchema(pool);
